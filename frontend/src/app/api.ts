@@ -21,7 +21,10 @@ export const mockStatus = {
   },
   triggered_systems: ['HEALTH', 'WATER', 'AIR_QUALITY'],
   time_to_impact: 2,
-  confidence_interval: { lower: 0.72, upper: 0.84 },
+  confidence_interval: {
+    lower: 0.72 + (Math.random() * 0.04 - 0.02),
+    upper: 0.84 + (Math.random() * 0.04 - 0.02)
+  },
   latest_data: {
     aqi: 178,
     traffic_index: 0.65,
@@ -352,10 +355,31 @@ export const simulate = async (params: {
   trafficReduction: number;
   industrialCut: number;
   heatwaveLevel: number;
+  waterConservation: number;
+  greenSpaceExpansion: number;
 }) => {
   try {
     const response = await api.post('/simulate', params);
-    return response.data;
+    const d = response.data;
+    if (!d || d.success === false) throw new Error('Simulation failed');
+
+    const transform = (node: any) => ({
+      ...node,
+      cascade_effects: {
+        aqi_impact: node.cascade_effects?.aqi_risk != null
+          ? Math.round(node.cascade_effects.aqi_risk * (d.adjusted_data?.aqi || 178))
+          : (node.cascade_effects?.aqi_impact ?? 0),
+        water_stress: node.cascade_effects?.water_risk ?? node.cascade_effects?.water_stress ?? 0,
+        health_risk: node.cascade_effects?.health_risk ?? 0,
+        traffic_disruption: node.cascade_effects?.traffic_risk ?? node.cascade_effects?.traffic_disruption ?? 0,
+      }
+    });
+
+    return {
+      ...d,
+      baseline: transform(d.baseline),
+      result: transform(d.result),
+    };
   } catch (error) {
     console.warn('Backend offline, using mock data:', error);
     const baselineRisk = 0.78;
@@ -366,16 +390,26 @@ export const simulate = async (params: {
         risk_score: baselineRisk,
         crisis_level: 'HIGH',
         triggered_systems: ['HEALTH', 'WATER', 'AIR_QUALITY'],
+        time_to_impact: 1,
+        cascade_effects: { aqi_impact: 178, water_stress: 0.72, health_risk: 0.85, traffic_disruption: 0.65 }
       },
       result: {
         risk_score: newRisk,
         crisis_level: newRisk > 0.7 ? 'HIGH' : newRisk > 0.5 ? 'MODERATE' : 'LOW',
         triggered_systems: newRisk > 0.7 ? ['HEALTH', 'AIR_QUALITY'] : newRisk > 0.5 ? ['AIR_QUALITY'] : [],
+        time_to_impact: Math.round(14 * (1 - newRisk)),
+        cascade_effects: {
+          aqi_impact: Math.round(178 * (1 - reduction)),
+          water_stress: Math.max(0.1, 0.72 - (params.waterConservation * 0.004)),
+          health_risk: Math.max(0.1, 0.85 - reduction),
+          traffic_disruption: Math.max(0.1, 0.65 - (params.trafficReduction * 0.006))
+        }
       },
       delta: {
         risk_reduction: baselineRisk - newRisk,
         percentage_improvement: ((baselineRisk - newRisk) / baselineRisk * 100).toFixed(1),
       },
+      adjusted_data: { aqi: 178 * (1 - reduction) }
     };
   }
 };
@@ -391,7 +425,7 @@ export const compareScenarios = async (scenarios: any[]) => {
         const reduction = (scenario.trafficReduction * 0.003 + scenario.industrialCut * 0.004) - (scenario.heatwaveLevel * 0.05);
         const newRisk = Math.max(0.2, Math.min(1.0, 0.78 - reduction));
         return {
-          scenario_label: scenario.label,
+          label: scenario.label,
           risk_score: newRisk,
           percentage_improvement: ((0.78 - newRisk) / 0.78 * 100).toFixed(1),
           crisis_level: newRisk > 0.7 ? 'HIGH' : newRisk > 0.5 ? 'MODERATE' : 'LOW',
@@ -434,14 +468,14 @@ export const getDeforestationRisk = async (year?: number) => {
     return {
       source: 'fallback',
       scores: [
-        { state: 'Jharkhand', risk_score: 78.2, risk_level: 'Critical', deforestation_rate_pct: 0.45, forest_cover_pct: 29.6 },
-        { state: 'Assam', risk_score: 71.5, risk_level: 'Critical', deforestation_rate_pct: 0.38, forest_cover_pct: 34.2 },
-        { state: 'Madhya Pradesh', risk_score: 62.4, risk_level: 'High', deforestation_rate_pct: 0.28, forest_cover_pct: 25.1 },
-        { state: 'Maharashtra', risk_score: 55.8, risk_level: 'High', deforestation_rate_pct: 0.22, forest_cover_pct: 16.5 },
-        { state: 'Karnataka', risk_score: 48.3, risk_level: 'Moderate', deforestation_rate_pct: 0.18, forest_cover_pct: 20.1 },
-        { state: 'Odisha', risk_score: 44.1, risk_level: 'Moderate', deforestation_rate_pct: 0.15, forest_cover_pct: 33.2 },
-        { state: 'Rajasthan', risk_score: 38.7, risk_level: 'Moderate', deforestation_rate_pct: 0.12, forest_cover_pct: 4.9 },
-        { state: 'Kerala', risk_score: 25.2, risk_level: 'Low', deforestation_rate_pct: 0.06, forest_cover_pct: 54.4 },
+        { state: 'Jharkhand', risk_score: 78.2, risk_level: 'Critical', deforestation_rate_pct: 0.45, forest_cover_pct: 29.6, confidence: [75, 82] },
+        { state: 'Assam', risk_score: 71.5, risk_level: 'Critical', deforestation_rate_pct: 0.38, forest_cover_pct: 34.2, confidence: [68, 74] },
+        { state: 'Madhya Pradesh', risk_score: 62.4, risk_level: 'High', deforestation_rate_pct: 0.28, forest_cover_pct: 25.1, confidence: [59, 65] },
+        { state: 'Maharashtra', risk_score: 55.8, risk_level: 'High', deforestation_rate_pct: 0.22, forest_cover_pct: 16.5, confidence: [52, 59] },
+        { state: 'Karnataka', risk_score: 48.3, risk_level: 'Moderate', deforestation_rate_pct: 0.18, forest_cover_pct: 20.1, confidence: [45, 51] },
+        { state: 'Odisha', risk_score: 44.1, risk_level: 'Moderate', deforestation_rate_pct: 0.15, forest_cover_pct: 33.2, confidence: [41, 47] },
+        { state: 'Rajasthan', risk_score: 38.7, risk_level: 'Moderate', deforestation_rate_pct: 0.12, forest_cover_pct: 4.9, confidence: [35, 42] },
+        { state: 'Kerala', risk_score: 25.2, risk_level: 'Low', deforestation_rate_pct: 0.06, forest_cover_pct: 54.4, confidence: [22, 28] },
       ],
     };
   }

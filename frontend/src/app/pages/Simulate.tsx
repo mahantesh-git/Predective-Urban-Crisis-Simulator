@@ -9,6 +9,7 @@ import { Input } from '../components/ui/input';
 import { Zap, TrendingDown, Trophy, Plus, X, Droplets, TreePine, Car, Factory, ThermometerSun, ShieldCheck } from 'lucide-react';
 import { PageTransition } from '../components/PageTransition';
 import { PageHeader } from '../components/PageHeader';
+import { useCity } from '../context/CityContext';
 
 interface SimulationResult {
   baseline: {
@@ -16,6 +17,7 @@ interface SimulationResult {
     crisis_level: string;
     triggered_systems: string[];
     cascade_effects?: any;
+    time_to_impact?: number;
     confidence_interval?: { lower: number; upper: number };
   };
   result: {
@@ -23,7 +25,7 @@ interface SimulationResult {
     crisis_level: string;
     triggered_systems: string[];
     cascade_effects?: any;
-    time_to_impact?: string | number;
+    time_to_impact?: number;
     confidence_interval?: { lower: number; upper: number };
   };
   delta: {
@@ -44,6 +46,7 @@ interface Scenario {
 }
 
 export function Simulate() {
+  const { city } = useCity();
   const [trafficReduction, setTrafficReduction] = useState(50);
   const [industrialCut, setIndustrialCut] = useState(50);
   const [heatwaveLevel, setHeatwaveLevel] = useState(2);
@@ -67,6 +70,28 @@ export function Simulate() {
   const [comparisonResult, setComparisonResult] = useState<any>(null);
   const [comparingLoading, setComparingLoading] = useState(false);
 
+  const getLevel = (score: number) => {
+    if (score >= 0.8) return 'CRITICAL';
+    if (score >= 0.6) return 'HIGH';
+    if (score >= 0.4) return 'MODERATE';
+    return 'LOW';
+  };
+
+  const getCrisisColor = (level: string) => {
+    switch (level?.toUpperCase()) {
+      case 'CRITICAL':
+        return 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]';
+      case 'HIGH':
+        return 'bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.5)]';
+      case 'MODERATE':
+        return 'bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.5)]';
+      case 'LOW':
+        return 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]';
+      default:
+        return 'bg-slate-500';
+    }
+  };
+
   const runSimulation = async () => {
     setLoading(true);
     try {
@@ -77,7 +102,39 @@ export function Simulate() {
         waterConservation,
         greenSpaceExpansion,
       } as any);
-      setResult(data);
+
+      // Apply city multiplier for consistency with Dashboard
+      const m = city.riskMultiplier;
+      const rawBaseline = (data.baseline?.risk_score || 0) * m;
+      const rawResult = (data.result?.risk_score || 0) * m;
+
+      const scaledResult = {
+        ...data,
+        baseline: {
+          ...data.baseline,
+          risk_score: Math.min(rawBaseline, 1),
+          crisis_level: getLevel(Math.min(rawBaseline, 1)),
+        },
+        result: {
+          ...data.result,
+          risk_score: Math.min(rawResult, 1),
+          crisis_level: getLevel(Math.min(rawResult, 1)),
+          confidence_interval: data.result?.confidence_interval ? {
+            lower: Math.max(0, Math.min(1, data.result.confidence_interval.lower * m)),
+            upper: Math.max(0, Math.min(1, data.result.confidence_interval.upper * m)),
+          } : undefined
+        }
+      };
+
+      // Recalculate delta based on RAW scaled values to avoid saturation at 100%
+      scaledResult.delta = {
+        risk_reduction: Math.max(0, rawBaseline - rawResult),
+        percentage_improvement: rawBaseline > 0
+          ? (((rawBaseline - rawResult) / rawBaseline) * 100).toFixed(1)
+          : "0.0"
+      };
+
+      setResult(scaledResult);
     } catch (error) {
       console.error('Simulation failed:', error);
     } finally {
@@ -89,7 +146,23 @@ export function Simulate() {
     setComparingLoading(true);
     try {
       const data = await compareScenarios(scenarios);
-      setComparisonResult(data);
+
+      // Apply scaling to comparison results
+      const m = city.riskMultiplier;
+      const scaledData = {
+        ...data,
+        comparison: data.comparison.map((row: any) => {
+          // Store raw for internal logic if needed, but here we just need correct display levels
+          const scaledRisk = Math.min(row.risk_score * m, 1);
+          return {
+            ...row,
+            risk_score: scaledRisk,
+            crisis_level: getLevel(scaledRisk),
+          };
+        })
+      };
+
+      setComparisonResult(scaledData);
     } catch (error) {
       console.error('Comparison failed:', error);
     } finally {
@@ -126,25 +199,10 @@ export function Simulate() {
     );
   };
 
-  const getCrisisColor = (level: string) => {
-    switch (level?.toUpperCase()) {
-      case 'CRITICAL':
-        return 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]';
-      case 'HIGH':
-        return 'bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.5)]';
-      case 'MODERATE':
-        return 'bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.5)]';
-      case 'LOW':
-        return 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]';
-      default:
-        return 'bg-slate-500';
-    }
-  };
-
   const getRiskGradient = (score: number) => {
     if (score > 0.75) return 'from-red-500 to-red-900';
     if (score > 0.55) return 'from-orange-500 to-orange-900';
-    if (score > 0.3) return 'from-yellow-500 to-yellow-900';
+    if (score > 0.35) return 'from-yellow-500 to-yellow-900';
     return 'from-emerald-500 to-emerald-900';
   };
 
@@ -153,7 +211,7 @@ export function Simulate() {
       <div className="space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <PageHeader
           title="Crisis Control & Policy Simulator"
-          subtitle="Test high-impact urban policies and simulate ecological restoration outcomes in real-time."
+          subtitle={`Test high-impact urban policies and simulate ecological restoration outcomes for ${city.name} in real-time.`}
           icon={Zap}
         />
 
@@ -181,101 +239,130 @@ export function Simulate() {
                   <ShieldCheck className="w-24 h-24 text-emerald-500" />
                 </div>
 
-                <h3 className="text-xl font-bold text-white mb-8 border-b border-slate-800 pb-4 flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-emerald-500" />
-                  Policy Parameter Injection
+                <h3 className="text-xl font-bold text-white mb-8 border-b border-slate-800 pb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-emerald-500" />
+                    Policy Parameter Injection
+                  </div>
+                  <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 bg-emerald-500/5 px-3 py-1 text-[10px] uppercase tracking-tighter">
+                    TARGET: {city.name}
+                  </Badge>
                 </h3>
 
                 <div className="space-y-10">
                   {/* Traffic Control */}
-                  <div className="space-y-4">
+                  <div className="space-y-4 p-5 rounded-2xl border border-slate-800/40 bg-slate-900/20 hover:bg-slate-800/40 transition-all group/slider">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="p-2 bg-blue-500/10 rounded-lg"><Car className="w-4 h-4 text-blue-400" /></div>
-                        <label className="text-sm font-bold text-slate-200 tracking-wide uppercase">Traffic Volume Reduction</label>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-emerald-500/10 rounded-xl group-hover/slider:bg-emerald-500/20 transition-colors"><Car className="w-4 h-4 text-emerald-400" /></div>
+                        <label className="text-sm font-bold text-slate-200 tracking-wider uppercase">Traffic Volume</label>
                       </div>
-                      <span className="text-lg font-mono font-bold text-blue-400 bg-blue-400/10 px-3 py-1 rounded-md">{trafficReduction}%</span>
+                      <span className="text-xl font-black text-emerald-400 font-mono bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20 shadow-[inset_0_0_10px_rgba(16,185,129,0.1)]">{trafficReduction}%</span>
                     </div>
-                    <Slider
-                      value={[trafficReduction]}
-                      onValueChange={(value) => setTrafficReduction(value[0])}
-                      max={100}
-                      step={1}
-                      className="cursor-pointer"
-                    />
-                    <p className="text-[10px] text-slate-500 font-medium">Mitigates urban mobility emissions and noise pollution factors.</p>
+                    <div className="pt-2 pb-1">
+                      <Slider
+                        value={[trafficReduction]}
+                        onValueChange={(value) => setTrafficReduction(value[0])}
+                        max={100}
+                        step={1}
+                        className="cursor-pointer"
+                        rangeClassName="bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                        thumbClassName="border-emerald-400 hover:border-emerald-300"
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">Mitigates urban mobility emissions and noise pollution factors.</p>
                   </div>
 
                   {/* Industrial Emissions */}
-                  <div className="space-y-4">
+                  <div className="space-y-4 p-5 rounded-2xl border border-slate-800/40 bg-slate-900/20 hover:bg-slate-800/40 transition-all group/slider">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="p-2 bg-purple-500/10 rounded-lg"><Factory className="w-4 h-4 text-purple-400" /></div>
-                        <label className="text-sm font-bold text-slate-200 tracking-wide uppercase">Industrial Emission Cutting</label>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-emerald-500/10 rounded-xl group-hover/slider:bg-emerald-500/20 transition-colors"><Factory className="w-4 h-4 text-emerald-400" /></div>
+                        <label className="text-sm font-bold text-slate-200 tracking-wider uppercase">Industrial Cuts</label>
                       </div>
-                      <span className="text-lg font-mono font-bold text-purple-400 bg-purple-400/10 px-3 py-1 rounded-md">{industrialCut}%</span>
+                      <span className="text-xl font-black text-emerald-400 font-mono bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20 shadow-[inset_0_0_10px_rgba(16,185,129,0.1)]">{industrialCut}%</span>
                     </div>
-                    <Slider
-                      value={[industrialCut]}
-                      onValueChange={(value) => setIndustrialCut(value[0])}
-                      max={100}
-                      step={1}
-                    />
-                    <p className="text-[10px] text-slate-500 font-medium">Aggressive mandates for large-scale production facilities and energy sectors.</p>
+                    <div className="pt-2 pb-1">
+                      <Slider
+                        value={[industrialCut]}
+                        onValueChange={(value) => setIndustrialCut(value[0])}
+                        max={100}
+                        step={1}
+                        className="cursor-pointer"
+                        rangeClassName="bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                        thumbClassName="border-emerald-400 hover:border-emerald-300"
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">Aggressive mandates for large-scale production facilities and energy sectors.</p>
                   </div>
 
                   {/* Water Conservation */}
-                  <div className="space-y-4">
+                  <div className="space-y-4 p-5 rounded-2xl border border-slate-800/40 bg-slate-900/20 hover:bg-slate-800/40 transition-all group/slider">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="p-2 bg-cyan-500/10 rounded-lg"><Droplets className="w-4 h-4 text-cyan-400" /></div>
-                        <label className="text-sm font-bold text-slate-200 tracking-wide uppercase">Water Conservation Protocol</label>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-emerald-500/10 rounded-xl group-hover/slider:bg-emerald-500/20 transition-colors"><Droplets className="w-4 h-4 text-emerald-400" /></div>
+                        <label className="text-sm font-bold text-slate-200 tracking-wider uppercase">Water Protocol</label>
                       </div>
-                      <span className="text-lg font-mono font-bold text-cyan-400 bg-cyan-400/10 px-3 py-1 rounded-md">{waterConservation}%</span>
+                      <span className="text-xl font-black text-emerald-400 font-mono bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20 shadow-[inset_0_0_10px_rgba(16,185,129,0.1)]">{waterConservation}%</span>
                     </div>
-                    <Slider
-                      value={[waterConservation]}
-                      onValueChange={(value) => setWaterConservation(value[0])}
-                      max={100}
-                      step={1}
-                    />
-                    <p className="text-[10px] text-slate-500 font-medium">Improves groundwater reservoir levels and reduces aquatic stress indices.</p>
+                    <div className="pt-2 pb-1">
+                      <Slider
+                        value={[waterConservation]}
+                        onValueChange={(value) => setWaterConservation(value[0])}
+                        max={100}
+                        step={1}
+                        className="cursor-pointer"
+                        rangeClassName="bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                        thumbClassName="border-emerald-400 hover:border-emerald-300"
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">Improves groundwater reservoir levels and reduces aquatic stress indices.</p>
                   </div>
 
                   {/* Green Space */}
-                  <div className="space-y-4">
+                  <div className="space-y-4 p-5 rounded-2xl border border-slate-800/40 bg-slate-900/20 hover:bg-slate-800/40 transition-all group/slider">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="p-2 bg-emerald-500/10 rounded-lg"><TreePine className="w-4 h-4 text-emerald-400" /></div>
-                        <label className="text-sm font-bold text-slate-200 tracking-wide uppercase">Urban Greenery Expansion</label>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-emerald-500/10 rounded-xl group-hover/slider:bg-emerald-500/20 transition-colors"><TreePine className="w-4 h-4 text-emerald-400" /></div>
+                        <label className="text-sm font-bold text-slate-200 tracking-wider uppercase">Urban Greenery</label>
                       </div>
-                      <span className="text-lg font-mono font-bold text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-md">{greenSpaceExpansion}%</span>
+                      <span className="text-xl font-black text-emerald-400 font-mono bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20 shadow-[inset_0_0_10px_rgba(16,185,129,0.1)]">{greenSpaceExpansion}%</span>
                     </div>
-                    <Slider
-                      value={[greenSpaceExpansion]}
-                      onValueChange={(value) => setGreenSpaceExpansion(value[0])}
-                      max={100}
-                      step={1}
-                    />
-                    <p className="text-[10px] text-slate-500 font-medium">Deploys rapid vegetation corridors and carbon-sink infrastructure.</p>
+                    <div className="pt-2 pb-1">
+                      <Slider
+                        value={[greenSpaceExpansion]}
+                        onValueChange={(value) => setGreenSpaceExpansion(value[0])}
+                        max={100}
+                        step={1}
+                        className="cursor-pointer"
+                        rangeClassName="bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                        thumbClassName="border-emerald-400 hover:border-emerald-300"
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">Deploys rapid vegetation corridors and carbon-sink infrastructure.</p>
                   </div>
 
                   {/* External Factor: Heatwave */}
-                  <div className="space-y-4">
+                  <div className="space-y-4 p-5 rounded-2xl border border-emerald-500/10 bg-emerald-500/5 hover:bg-emerald-500/10 transition-all group/slider mt-8">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="p-2 bg-orange-500/10 rounded-lg"><ThermometerSun className="w-4 h-4 text-orange-400" /></div>
-                        <label className="text-sm font-bold text-slate-200 tracking-wide uppercase">Heatwave Severity Scenario</label>
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-emerald-500/10 rounded-xl group-hover/slider:bg-emerald-500/20 transition-colors"><ThermometerSun className="w-4 h-4 text-emerald-400" /></div>
+                        <label className="text-sm font-bold text-slate-200 tracking-wider uppercase">Heatwave Stressor</label>
                       </div>
-                      <span className="text-lg font-mono font-bold text-orange-400 bg-orange-400/10 px-3 py-1 rounded-md">Lvl {heatwaveLevel}</span>
+                      <span className="text-xl font-black text-emerald-400 font-mono bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20 shadow-[inset_0_0_10px_rgba(16,185,129,0.1)]">LEVEL {heatwaveLevel}</span>
                     </div>
-                    <Slider
-                      value={[heatwaveLevel]}
-                      onValueChange={(value) => setHeatwaveLevel(value[0])}
-                      max={5}
-                      step={1}
-                    />
-                    <p className="text-[10px] text-slate-500 font-medium">Simulates extreme environmental stressors beyond direct state control.</p>
+                    <div className="pt-2 pb-1">
+                      <Slider
+                        value={[heatwaveLevel]}
+                        onValueChange={(value) => setHeatwaveLevel(value[0])}
+                        max={5}
+                        step={1}
+                        className="cursor-pointer"
+                        rangeClassName="bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                        thumbClassName="border-emerald-400 hover:border-emerald-300"
+                      />
+                    </div>
+                    <p className="text-[11px] text-emerald-400/60 font-medium leading-relaxed">Simulates extreme environmental stressors beyond direct state control.</p>
                   </div>
                 </div>
 
@@ -416,27 +503,33 @@ export function Simulate() {
                           <Badge variant="outline" className="border-cyan-500/30 text-cyan-500 text-[10px] mt-1 bg-cyan-500/5"> MITIGATED </Badge>
                         </div>
                         <div>
-                          <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">Time-to-Impact</p>
-                          <p className="text-2xl font-black text-white">+{result.result.time_to_impact || '1.4'}x</p>
-                          <p className="text-[10px] text-emerald-500/80 font-bold mt-1">RESPONSE WINDOW GAIN</p>
+                          <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">Response Window</p>
+                          <p className="text-2xl font-black text-white">
+                            {result.result.time_to_impact != null ? `${result.result.time_to_impact}` : '0'} Days
+                          </p>
+                          <Badge variant="outline" className="border-emerald-500/30 text-emerald-500 text-[10px] mt-1 bg-emerald-500/5">
+                            {(result.result.time_to_impact || 0) > (result.baseline.time_to_impact || 0) ? 'EXPANDED' : 'CRITICAL'}
+                          </Badge>
                         </div>
                         <div>
-                          <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">Crises Averted</p>
-                          <p className="text-2xl font-black text-emerald-400">{(Number(result.delta.percentage_improvement) / 10).toFixed(0)}</p>
-                          <p className="text-[10px] text-slate-500 font-bold mt-1">CRITICAL THRESHOLDS</p>
+                          <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">System Stability</p>
+                          <p className="text-2xl font-black text-emerald-400">
+                            +{(Number(result.delta.percentage_improvement) / 5).toFixed(1)}x
+                          </p>
+                          <p className="text-[10px] text-slate-500 font-bold mt-1">RESILIENCE FACTOR</p>
                         </div>
                       </div>
                     </Card>
 
-                    {/* Crises Averted Card */}
+                    {/* Restoration Summary Card */}
                     <div className="p-6 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center gap-6">
                       <ShieldCheck className="w-12 h-12 text-emerald-500 shrink-0" />
                       <div>
-                        <h5 className="font-bold text-emerald-400 uppercase text-sm mb-1 underline decoration-emerald-500/30 underline-offset-4">Ecological Restoration Summary</h5>
-                        <p className="text-xs text-slate-300 leading-relaxed font-medium">
-                          The proposed policy combination results in a <span className="text-emerald-400 font-bold">{result.delta.percentage_improvement}% improvement</span> in city-wide risk.
-                          Key averted events include <span className="text-white font-bold">Health System Overflow</span> and <span className="text-white font-bold">Critical Industrial Smog</span>.
-                          Total time gained for emergency mobilization: <span className="text-emerald-400 font-bold">~14 days</span>.
+                        <h5 className="font-bold text-emerald-500 uppercase text-sm mb-1 underline decoration-emerald-500/30 underline-offset-4">Ecological Restoration Summary</h5>
+                        <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                          The proposed policy combination results in a <span className="text-emerald-500 font-bold">{result.delta.percentage_improvement}% improvement</span> in city-wide risk.
+                          This expands our emergency mobilization window by <span className="text-slate-200 font-bold">{Math.max(0, (result.result.time_to_impact || 0) - (result.baseline.time_to_impact || 0))} days</span>.
+                          Projected to avert <span className="text-slate-200 font-bold">{(Number(result.delta.percentage_improvement) / 10).toFixed(0)}</span> major system threshold breaches.
                         </p>
                       </div>
                     </div>

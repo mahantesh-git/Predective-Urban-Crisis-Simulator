@@ -109,9 +109,22 @@ export function Dashboard() {
 
       // Apply city-specific risk multipliers
       const m = city.riskMultiplier;
+
+      const rawLower = data.confidence_interval?.lower || 0;
+      const rawUpper = data.confidence_interval?.upper || 0;
+      const rawRisk = data.risk_score || 0;
+
+      const scaledRisk = Math.min(rawRisk * m, 1);
+      const lowerOffset = rawRisk - rawLower;
+      const upperOffset = rawUpper - rawRisk;
+
       const scaledData = {
         ...data,
-        risk_score: Math.min((data.risk_score || 0) * m, 1),
+        risk_score: scaledRisk,
+        confidence_interval: {
+          lower: Math.max(scaledRisk - lowerOffset * m, 0),
+          upper: Math.min(scaledRisk + upperOffset * m, 1),
+        },
         cascade_effects: {
           aqi_impact: Math.round(city.baseAqi + ((data.cascade_effects?.aqi_impact || 98) - 98) * m),
           water_stress: Math.min((data.cascade_effects?.water_stress || 0) * m, 1),
@@ -125,10 +138,14 @@ export function Dashboard() {
       };
 
       // Recompute crisis level
-      if (scaledData.risk_score > 0.8) scaledData.crisis_level = 'CRITICAL';
-      else if (scaledData.risk_score > 0.6) scaledData.crisis_level = 'HIGH';
-      else if (scaledData.risk_score > 0.4) scaledData.crisis_level = 'MODERATE';
-      else scaledData.crisis_level = 'LOW';
+      const getLevel = (score: number) => {
+        if (score >= 0.8) return 'CRITICAL';
+        if (score >= 0.6) return 'HIGH';
+        if (score >= 0.4) return 'MODERATE';
+        return 'LOW';
+      };
+
+      scaledData.crisis_level = getLevel(scaledData.risk_score);
 
       setStatus(scaledData);
     } catch (error) {
@@ -136,6 +153,13 @@ export function Dashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getLevel = (score: number) => {
+    if (score >= 0.8) return 'CRITICAL';
+    if (score >= 0.6) return 'HIGH';
+    if (score >= 0.4) return 'MODERATE';
+    return 'LOW';
   };
 
   if (loading || !status) {
@@ -212,8 +236,7 @@ export function Dashboard() {
             <div className="flex items-center justify-between text-sm text-muted-foreground font-medium">
               <span>Confidence: {((status?.confidence_interval?.lower ?? 0) * 100).toFixed(0)}% - {((status?.confidence_interval?.upper ?? 0) * 100).toFixed(0)}%</span>
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                <span>Time to Impact: {status?.time_to_impact ?? 'N/A'} days</span>
+
               </div>
             </div>
           </div>
@@ -226,7 +249,9 @@ export function Dashboard() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Air Quality</p>
                 <p className="text-3xl font-bold text-card-foreground mt-2">{status?.cascade_effects?.aqi_impact ?? 'N/A'}</p>
-                <p className="text-xs text-destructive mt-1 font-semibold">Hazardous</p>
+                <p className={`text-xs mt-1 font-semibold ${getCrisisTextColor(getLevel(status?.cascade_effects?.aqi_impact / 500))}`}>
+                  {getLevel(status?.cascade_effects?.aqi_impact / 500)}
+                </p>
               </div>
               <div className="w-12 h-12 bg-red-500/10 rounded-lg flex items-center justify-center">
                 <AlertTriangle className="w-6 h-6 text-red-500" />
@@ -239,7 +264,9 @@ export function Dashboard() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Water Stress</p>
                 <p className="text-3xl font-bold text-card-foreground mt-2">{((status?.cascade_effects?.water_stress ?? 0) * 100).toFixed(0)}%</p>
-                <p className="text-xs text-rust mt-1 font-semibold">Critical</p>
+                <p className={`text-xs mt-1 font-semibold ${getCrisisTextColor(getLevel(status.cascade_effects.water_stress))}`}>
+                  {getLevel(status.cascade_effects.water_stress)}
+                </p>
               </div>
               <div className="w-12 h-12 bg-orange-500/10 rounded-lg flex items-center justify-center">
                 <Droplets className="w-6 h-6 text-orange-500" />
@@ -252,7 +279,9 @@ export function Dashboard() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Health Risk</p>
                 <p className="text-3xl font-bold text-card-foreground mt-2">{((status?.cascade_effects?.health_risk ?? 0) * 100).toFixed(0)}%</p>
-                <p className="text-xs text-yellow-600 mt-1 font-semibold">Elevated</p>
+                <p className={`text-xs mt-1 font-semibold ${getCrisisTextColor(getLevel(status.cascade_effects.health_risk))}`}>
+                  {getLevel(status.cascade_effects.health_risk)}
+                </p>
               </div>
               <div className="w-12 h-12 bg-yellow-500/10 rounded-lg flex items-center justify-center">
                 <Heart className="w-6 h-6 text-yellow-500" />
@@ -265,7 +294,9 @@ export function Dashboard() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Traffic Status</p>
                 <p className="text-3xl font-bold text-card-foreground mt-2">{((status?.cascade_effects?.traffic_disruption ?? 0) * 100).toFixed(0)}%</p>
-                <p className="text-xs text-green-600 mt-1 font-semibold">Moderate</p>
+                <p className={`text-xs mt-1 font-semibold ${getCrisisTextColor(getLevel(status.cascade_effects.traffic_disruption))}`}>
+                  {getLevel(status.cascade_effects.traffic_disruption)}
+                </p>
               </div>
               <div className="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center">
                 <Car className="w-6 h-6 text-green-500" />
@@ -278,8 +309,8 @@ export function Dashboard() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Forest Risk</p>
                 <p className="text-3xl font-bold text-card-foreground mt-2">{Math.round(forestRisk?.risk_score || 0)}/100</p>
-                <p className={`text-xs mt-1 font-semibold ${forestRisk?.risk_level === 'Critical' || forestRisk?.risk_level === 'High' ? 'text-red-500' : 'text-orange-500'}`}>
-                  {forestRisk?.risk_level || 'Moderate'}
+                <p className={`text-xs mt-1 font-semibold ${getCrisisTextColor(getLevel((forestRisk?.risk_score || 0) / 100))}`}>
+                  {forestRisk?.risk_level || getLevel((forestRisk?.risk_score || 0) / 100)}
                 </p>
               </div>
               <div className="w-12 h-12 bg-emerald-500/10 rounded-lg flex items-center justify-center">

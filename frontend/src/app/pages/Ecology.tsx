@@ -221,7 +221,13 @@ export function Ecology() {
                                     <YAxis type="category" dataKey="state" stroke="#94a3b8" fontSize={11} width={90} />
                                     <Tooltip
                                         contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#fff' }}
-                                        formatter={(v: any, _: string, props: any) => [`${v} / 100`, props.payload.fullState]}
+                                        formatter={(v: any, _: string, props: any) => [
+                                            <div key="custom-tooltip">
+                                                <div className="font-bold">{v} / 100</div>
+                                                <div className="text-[10px] text-emerald-400 mt-1">Confidence: {props.payload.confidence}</div>
+                                            </div>,
+                                            props.payload.fullState
+                                        ]}
                                     />
                                     <Bar dataKey="risk" radius={[0, 4, 4, 0]}>
                                         {riskChartData.map((entry, idx) => (

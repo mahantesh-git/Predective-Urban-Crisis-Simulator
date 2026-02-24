@@ -99,6 +99,7 @@ router.post('/', simulateValidationRules, validate, async (req, res, next) => {
                 risk_score: baselineRisk.risk_score,
                 cascade_effects: baselineRisk.cascade_effects,
                 triggered_systems: baselineRisk.triggered_systems,
+                time_to_impact: baselineRisk.time_to_impact,
                 crisis_level: getCrisisLevel(baselineRisk.risk_score),
             },
             result: {
