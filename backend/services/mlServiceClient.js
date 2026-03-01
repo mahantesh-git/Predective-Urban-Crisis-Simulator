@@ -47,8 +47,6 @@ const callMLEndpoint = async (path, payload) => {
 const predictAQI = (payload) => callMLEndpoint('/predict/aqi', payload);
 const predictWater = (payload) => callMLEndpoint('/predict/water', payload);
 const predictHealth = (payload) => callMLEndpoint('/predict/health', payload);
-const predictForest = (payload) => callMLEndpoint('/predict/forest', payload);
-const predictTraffic = (payload) => callMLEndpoint('/predict/traffic', payload);
 
 /**
  * Check if the ML service is healthy.
@@ -108,8 +106,6 @@ module.exports = {
     predictAQI,
     predictWater,
     predictHealth,
-    predictForest,
-    predictTraffic,
     checkMLHealth,
     fetchDeforestationData,
     compareDeforestationStates,

@@ -6,6 +6,8 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { TrendingUp, TrendingDown, Clock, History as HistoryIcon } from 'lucide-react';
 import { PageTransition } from '../components/PageTransition';
 import { PageHeader } from '../components/PageHeader';
+import { CrisisReplaySlider } from '../components/timeline/CrisisReplaySlider';
+import { useCity } from '../context/CityContext';
 
 interface HistoryData {
   labels: string[];
@@ -22,13 +24,16 @@ export function History() {
   const [history, setHistory] = useState<HistoryData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const { city } = useCity();
+
   useEffect(() => {
     loadHistory();
-  }, []);
+  }, [city.id]);
 
   const loadHistory = async () => {
+    setLoading(true);
     try {
-      const data = await getHistory();
+      const data = await getHistory(city.id);
       setHistory(data);
     } catch (error) {
       console.error('Failed to load history:', error);
@@ -37,7 +42,7 @@ export function History() {
     }
   };
 
-  if (loading || !history) {
+  if (!history) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
@@ -57,7 +62,7 @@ export function History() {
 
   return (
     <PageTransition>
-      <div className="space-y-6">
+      <div className={`space-y-6 transition-opacity duration-500 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
         <div className="flex items-start justify-between">
           <PageHeader
             title="Historical Trends"
@@ -123,6 +128,9 @@ export function History() {
             </div>
           </Card>
         </div>
+
+        {/* Timeline Replay Component */}
+        <CrisisReplaySlider data={history} />
 
         {/* Multi-series Area Chart */}
         <Card className="bg-card border-border p-6 shadow-sm">

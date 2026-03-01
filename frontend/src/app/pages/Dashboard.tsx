@@ -162,7 +162,7 @@ export function Dashboard() {
     return 'LOW';
   };
 
-  if (loading || !status) {
+  if (!status) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500"></div>
@@ -202,7 +202,7 @@ export function Dashboard() {
 
   return (
     <PageTransition>
-      <div className="space-y-6">
+      <div className={`space-y-6 transition-opacity duration-500 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
         {/* Standardized Header */}
         <div className="flex items-start justify-between">
           <PageHeader
@@ -329,7 +329,7 @@ export function Dashboard() {
             </h3>
             <div className="flex flex-wrap gap-3">
               {(status?.triggered_systems || []).map((system) => (
-                <Badge key={system} className="bg-red-50 text-destructive border-red-200 shadow-sm px-3 py-1 font-medium hover:bg-red-100">
+                <Badge key={system} className="bg-destructive/10 text-destructive border-destructive/20 shadow-sm px-3 py-1 font-medium hover:bg-destructive/20">
                   {system.replace(/_/g, ' ')}
                 </Badge>
               ))}
@@ -338,7 +338,7 @@ export function Dashboard() {
 
           <Card className="bg-card border-border p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-[#4B2E1E]" />
+              <TrendingUp className="w-5 h-5 text-primary" />
               Latest Sensor Readings
             </h3>
             <div className="grid grid-cols-2 gap-6">
@@ -348,7 +348,7 @@ export function Dashboard() {
               </div>
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Traffic Density</p>
-                <p className="text-2xl font-bold text-card-foreground mt-1">{((status?.latest_data?.traffic_index ?? 0) * 100).toFixed(0)}%</p>
+                <p className="text-2xl font-bold text-card-foreground mt-1">{(status?.latest_data?.traffic_index ?? 0).toFixed(0)}%</p>
               </div>
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Water Contamination</p>

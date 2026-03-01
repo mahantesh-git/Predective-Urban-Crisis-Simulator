@@ -9,7 +9,7 @@ logger = logging.getLogger("smart_city_ml")
 
 # Import services and routers
 from services.model_loader import load_models
-from routers import aqi, water, health, forest, traffic
+from routers import aqi, water, health, deforestation
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -43,8 +43,10 @@ app.add_middleware(
 app.include_router(aqi.router)
 app.include_router(water.router)
 app.include_router(health.router)
-app.include_router(forest.router)
-app.include_router(traffic.router)
+app.include_router(deforestation.router)
+from routers import transparency, multi_forecast
+app.include_router(transparency.router)
+app.include_router(multi_forecast.router)
 
 @app.get("/")
 async def root():

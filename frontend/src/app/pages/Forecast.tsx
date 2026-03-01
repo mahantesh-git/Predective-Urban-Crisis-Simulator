@@ -7,6 +7,7 @@ import { TrendingUp, Cloud, CalendarDays } from 'lucide-react';
 import { PageTransition } from '../components/PageTransition';
 import { PageHeader } from '../components/PageHeader';
 import { useCity } from '../context/CityContext';
+import { ShapleyBarChart } from '../components/xai/ShapleyBarChart';
 
 interface ForecastData {
   mode: string;
@@ -22,6 +23,13 @@ interface ForecastData {
   time_to_impact_days?: string;
   affected_zones?: string[];
   recommended_policies?: string[];
+  explainable_ai?: {
+    model_confidence_pct: number;
+    shap_contributions: {
+      aqi: { feature: string; impact: number }[];
+      water_stress: { feature: string; impact: number }[];
+    };
+  };
 }
 
 const RANGES = [
@@ -41,7 +49,6 @@ export function Forecast() {
 
   useEffect(() => {
     setLoading(true);
-    setForecast(null);
     loadForecast(selectedDays);
   }, [city.id, selectedDays]);
 
@@ -108,7 +115,7 @@ export function Forecast() {
 
   return (
     <PageTransition>
-      <div className="space-y-6">
+      <div className={`space-y-6 transition-opacity duration-500 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
         {/* Header */}
         <div className="flex items-start justify-between flex-wrap gap-4">
           <PageHeader
@@ -207,6 +214,17 @@ export function Forecast() {
                 <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500 rounded-full"></div><span>Predicted AQI</span></div>
                 <div className="flex items-center gap-2"><div className="w-3 h-3 bg-slate-400 rounded-full"></div><span>Confidence Band</span></div>
               </div>
+
+              {/* Explainable AI Block for AQI */}
+              {forecast.explainable_ai?.shap_contributions?.aqi && (
+                <div className="mt-6 pt-6 border-t border-border/50">
+                  <ShapleyBarChart
+                    title="AQI"
+                    contributions={forecast.explainable_ai.shap_contributions.aqi}
+                    confidencePct={forecast.explainable_ai.model_confidence_pct}
+                  />
+                </div>
+              )}
             </Card>
 
             {/* Water Stress Chart */}
@@ -252,6 +270,16 @@ export function Forecast() {
                 <div className="flex items-center gap-2"><div className="w-3 h-3 bg-rust rounded-full"></div><span>Predicted Water Stress</span></div>
                 <div className="flex items-center gap-2"><div className="w-3 h-3 bg-slate-400 rounded-full"></div><span>Confidence Band</span></div>
               </div>
+
+              {/* Explainable AI Block for Water Stress */}
+              {forecast.explainable_ai?.shap_contributions?.water_stress && (
+                <div className="mt-6 pt-6 border-t border-border/50">
+                  <ShapleyBarChart
+                    title="Water Contamination"
+                    contributions={forecast.explainable_ai.shap_contributions.water_stress}
+                  />
+                </div>
+              )}
             </Card>
 
             {/* Summary Cards */}

@@ -9,7 +9,11 @@ const EnvironmentalDataSchema = new mongoose.Schema(
         date: {
             type: Date,
             required: true,
-            unique: true,
+        },
+        cityId: {
+            type: String,
+            required: true,
+            index: true,
         },
         aqi: {
             type: Number,
@@ -56,5 +60,7 @@ const EnvironmentalDataSchema = new mongoose.Schema(
     },
     { timestamps: true }
 );
+
+EnvironmentalDataSchema.index({ date: 1, cityId: 1 }, { unique: true });
 
 module.exports = mongoose.model('EnvironmentalData', EnvironmentalDataSchema);

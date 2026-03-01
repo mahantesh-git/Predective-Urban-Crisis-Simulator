@@ -20,76 +20,91 @@ const EnvironmentalData = require('../models/EnvironmentalData');
  *  - Drought Index: worsening 0.15→0.55
  */
 
-const generateSeedData = () => {
+const generateSeedData = (cityId) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    // Simple hash-like offset based on cityId string for reproducible but different data per city
+    const offset = cityId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 20;
 
     return [
         {
             date: new Date(new Date(today).setDate(today.getDate() - 6)),
-            aqi: 85,
-            traffic: 55,
-            water_quality: 82,
-            industry_emission: 52,
-            temperature: 28,
-            drought_index: 0.15,
+            cityId,
+            aqi: 85 + offset,
+            traffic: 55 + (offset % 10),
+            water_quality: 82 - (offset % 5),
+            industry_emission: 52 + (offset % 8),
+            temperature: 28 + (offset % 3),
+            drought_index: 0.15 + (offset / 100),
         },
         {
             date: new Date(new Date(today).setDate(today.getDate() - 5)),
-            aqi: 105,
-            traffic: 62,
-            water_quality: 74,
-            industry_emission: 60,
-            temperature: 30,
-            drought_index: 0.20,
+            cityId,
+            aqi: 105 + offset,
+            traffic: 62 + (offset % 10),
+            water_quality: 74 - (offset % 5),
+            industry_emission: 60 + (offset % 8),
+            temperature: 30 + (offset % 3),
+            drought_index: 0.20 + (offset / 100),
         },
         {
             date: new Date(new Date(today).setDate(today.getDate() - 4)),
-            aqi: 130,
-            traffic: 70,
-            water_quality: 65,
-            industry_emission: 68,
-            temperature: 32,
-            drought_index: 0.28,
+            cityId,
+            aqi: 130 + offset,
+            traffic: 70 + (offset % 10),
+            water_quality: 65 - (offset % 5),
+            industry_emission: 68 + (offset % 8),
+            temperature: 32 + (offset % 3),
+            drought_index: 0.28 + (offset / 100),
         },
         {
             date: new Date(new Date(today).setDate(today.getDate() - 3)),
-            aqi: 155,
-            traffic: 78,
-            water_quality: 54,
-            industry_emission: 58, // weekend dip
-            temperature: 35,
-            drought_index: 0.35,
+            cityId,
+            aqi: 155 + offset,
+            traffic: 78 + (offset % 10),
+            water_quality: 54 - (offset % 5),
+            industry_emission: 58 + (offset % 8),
+            temperature: 35 + (offset % 3),
+            drought_index: 0.35 + (offset / 100),
         },
         {
             date: new Date(new Date(today).setDate(today.getDate() - 2)),
-            aqi: 170,
-            traffic: 65,
-            water_quality: 46,
-            industry_emission: 55, // weekend
-            temperature: 36,
-            drought_index: 0.42,
+            cityId,
+            aqi: 170 + offset,
+            traffic: 65 + (offset % 10),
+            water_quality: 46 - (offset % 5),
+            industry_emission: 55 + (offset % 8),
+            temperature: 36 + (offset % 3),
+            drought_index: 0.42 + (offset / 100),
         },
         {
             date: new Date(new Date(today).setDate(today.getDate() - 1)),
-            aqi: 195,
-            traffic: 82,
-            water_quality: 38,
-            industry_emission: 78,
-            temperature: 37,
-            drought_index: 0.48,
+            cityId,
+            aqi: 195 + offset,
+            traffic: 82 + (offset % 10),
+            water_quality: 38 - (offset % 5),
+            industry_emission: 78 + (offset % 8),
+            temperature: 37 + (offset % 3),
+            drought_index: 0.48 + (offset / 100),
         },
         {
             date: new Date(today),
-            aqi: 218,
-            traffic: 88,
-            water_quality: 30,
-            industry_emission: 88,
-            temperature: 38,
-            drought_index: 0.55,
+            cityId,
+            aqi: 218 + offset,
+            traffic: 88 + (offset % 10),
+            water_quality: 30 - (offset % 5),
+            industry_emission: 88 + (offset % 8),
+            temperature: 38 + (offset % 3),
+            drought_index: 0.55 + (offset / 100),
         },
     ];
 };
+
+const CITIES = [
+    'bengaluru', 'new-delhi', 'mumbai', 'chennai', 'hyderabad',
+    'kolkata', 'pune', 'ahmedabad', 'jaipur', 'lucknow'
+];
 
 const seed = async () => {
     await connectDB();
@@ -100,20 +115,15 @@ const seed = async () => {
     const deleted = await EnvironmentalData.deleteMany({});
     console.log(`🗑️  Cleared ${deleted.deletedCount} existing records.`);
 
-    // Insert 7-day mock dataset
-    const data = generateSeedData();
-    const inserted = await EnvironmentalData.insertMany(data);
+    let totalInserted = 0;
+    for (const cityId of CITIES) {
+        const data = generateSeedData(cityId);
+        const inserted = await EnvironmentalData.insertMany(data);
+        totalInserted += inserted.length;
+        console.log(`✅ Inserted 7 days for ${cityId}`);
+    }
 
-    console.log(`✅ Inserted ${inserted.length} days of environmental data:\n`);
-    inserted.forEach((d, i) => {
-        console.log(
-            `   Day ${i + 1} (${d.date.toDateString()}) → AQI: ${d.aqi}, Traffic: ${d.traffic}%, ` +
-            `Water: ${d.water_quality}, Emissions: ${d.industry_emission}, ` +
-            `Temp: ${d.temperature}°C, Drought: ${d.drought_index}`
-        );
-    });
-
-    console.log('\n🚀 Database ready. Run `npm run dev` to start the server.\n');
+    console.log(`\n🚀 Database ready with ${totalInserted} total records. Run \`npm run dev\` to start the server.\n`);
     await mongoose.disconnect();
 };
 

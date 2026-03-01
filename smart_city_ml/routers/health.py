@@ -28,15 +28,15 @@ async def predict_health(request: HealthPredictionRequest, registry: ModelRegist
             "temperature": request.temperature,
             "humidity": request.humidity,
             "population_density": request.population_density,
-            "water_quality_index": request.water_quality_index
+            "water_quality": request.water_quality_index
         }])
         
-        prediction = model.predict(features)[0]
+        prediction = int(model.predict(features)[0])
         
         # Assume model outputs string labels or map from ints
         risk_map = {0: "LOW", 1: "MODERATE", 2: "HIGH", 3: "CRITICAL"}
         
-        risk_level = risk_map.get(prediction, str(prediction)) if isinstance(prediction, (int, float)) else str(prediction)
+        risk_level = risk_map.get(prediction, str(prediction))
         
         return HealthPredictionResponse(risk_level=risk_level)
         

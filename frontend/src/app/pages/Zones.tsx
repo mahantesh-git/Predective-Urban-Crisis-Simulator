@@ -9,6 +9,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { PageTransition } from '../components/PageTransition';
 import { PageHeader } from '../components/PageHeader';
 import { useCity } from '../context/CityContext';
+import { VulnerabilityRadarCore } from '../components/analytics/VulnerabilityRadarCore';
 
 interface Zone {
   zone_id: string;
@@ -85,7 +86,7 @@ export function Zones() {
     }
   };
 
-  if (loading || !zonesData) {
+  if (!zonesData) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
@@ -125,7 +126,7 @@ export function Zones() {
 
   return (
     <PageTransition>
-      <div className="space-y-6">
+      <div className={`space-y-6 transition-opacity duration-500 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
         <PageHeader
           title="Zone Risk Map"
           subtitle="Monitor risk levels and evacuation priorities by geographic zone"
@@ -188,47 +189,50 @@ export function Zones() {
                 </Card>
               </SheetTrigger>
 
-              <SheetContent className="bg-card border-l border-border text-card-foreground w-full sm:max-w-2xl overflow-y-auto">
+              <SheetContent className="bg-slate-950/95 backdrop-blur-3xl border-l border-slate-800 text-white w-full sm:max-w-2xl overflow-y-auto">
                 <SheetHeader>
-                  <SheetTitle className="text-card-foreground text-2xl font-serif">
+                  <SheetTitle className="text-white text-2xl font-black tracking-tight mb-4 flex items-center gap-3">
+                    <div className="w-2 h-8 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
                     {zone.name} - Detailed Forecast
                   </SheetTitle>
                 </SheetHeader>
 
                 {detailLoading ? (
                   <div className="flex items-center justify-center h-96">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rust"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
                   </div>
                 ) : (
                   zoneDetail && (
-                    <div className="mt-6 space-y-6">
-                      <Card className="bg-background border-border p-6 shadow-sm">
-                        <div className="grid grid-cols-2 gap-4">
+                    <div className="mt-6 space-y-8 animate-in fade-in duration-500">
+                      <Card className="bg-slate-900/50 border-slate-800 p-8 shadow-2xl rounded-2xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl" />
+                        <div className="grid grid-cols-2 gap-8 relative z-10">
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Zone ID</p>
-                            <p className="text-lg font-bold text-card-foreground mt-1">{zone.zone_id}</p>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Zone ID</p>
+                            <p className="text-lg font-bold text-white mt-1">{zone.zone_id}</p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Current Risk</p>
-                            <p className="text-lg font-bold text-card-foreground mt-1">{(zone.risk_score * 100).toFixed(0)}%</p>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Current Risk</p>
+                            <p className="text-2xl font-black text-white mt-1 drop-shadow-md">{(zone.risk_score * 100).toFixed(0)}%</p>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Alert Level</p>
-                            <Badge
-                              variant="outline"
-                              className={`${getAlertColor(zone.alert_level)} border-0 text-white mt-1`}
-                            >
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Alert Level</p>
+                            <Badge variant="outline" className={`${getAlertColor(zone.alert_level)} border-0 text-white font-black text-[10px] px-3 py-1 uppercase tracking-widest shadow-lg`}>
                               {zone.alert_level}
                             </Badge>
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Population</p>
-                            <p className="text-lg font-bold text-card-foreground mt-1">{zone.population.toLocaleString()}</p>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Population</p>
+                            <p className="text-xl font-bold text-white mt-1">{zone.population.toLocaleString()}</p>
                           </div>
                         </div>
                       </Card>
 
-                      <Card className="bg-background border-border p-6 shadow-sm">
+                      <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 shadow-xl relative">
+                        <VulnerabilityRadarCore data={zone as any} zoneName={zone.name} />
+                      </div>
+
+                      <Card className="bg-slate-900/50 border border-slate-800 p-8 shadow-2xl rounded-2xl">
                         <h3 className="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
                           <TrendingUp className="w-5 h-5 text-rust" />
                           Zone Risk Forecast
@@ -322,3 +326,5 @@ export function Zones() {
     </PageTransition>
   );
 }
+
+

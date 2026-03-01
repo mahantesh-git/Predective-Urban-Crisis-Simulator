@@ -32,6 +32,11 @@ const ZONES = [
             traffic_risk: 0.50,
         },
         population_density: 'MEDIUM',
+        pop_density_norm: 0.5,
+        hospital_cap_inv: 0.6,
+        historical_crises: 0.8,
+        infrastructure_stress: 0.9,
+        socioeconomic_sensitivity: 0.7,
         critical_infrastructure: ['Power Plant', 'Waste Treatment', 'Chemical Factory'],
     },
     {
@@ -48,6 +53,11 @@ const ZONES = [
             traffic_risk: 0.40,
         },
         population_density: 'HIGH',
+        pop_density_norm: 0.9,
+        hospital_cap_inv: 0.3,
+        historical_crises: 0.4,
+        infrastructure_stress: 0.5,
+        socioeconomic_sensitivity: 0.4,
         critical_infrastructure: ['Hospitals', 'Schools', 'Water Treatment Plant'],
     },
     {
@@ -64,6 +74,11 @@ const ZONES = [
             traffic_risk: 0.95,
         },
         population_density: 'HIGH',
+        pop_density_norm: 0.8,
+        hospital_cap_inv: 0.2, // Good hospitals nearby
+        historical_crises: 0.3,
+        infrastructure_stress: 0.8,
+        socioeconomic_sensitivity: 0.2,
         critical_infrastructure: ['Business Parks', 'Metro Station', 'Shopping Centers'],
     },
     {
@@ -80,6 +95,11 @@ const ZONES = [
             traffic_risk: 0.30,
         },
         population_density: 'LOW',
+        pop_density_norm: 0.2,
+        hospital_cap_inv: 0.7,
+        historical_crises: 0.9,
+        infrastructure_stress: 0.6,
+        socioeconomic_sensitivity: 0.5,
         critical_infrastructure: ['Lake Reservoir', 'Pumping Station', 'Sewage Treatment'],
     },
     {
@@ -96,6 +116,11 @@ const ZONES = [
             traffic_risk: 1.00,
         },
         population_density: 'LOW',
+        pop_density_norm: 0.3,
+        hospital_cap_inv: 0.5,
+        historical_crises: 0.6,
+        infrastructure_stress: 1.0,
+        socioeconomic_sensitivity: 0.6,
         critical_infrastructure: ['Highway Junction', 'Bus Terminal', 'Freight Depot'],
     },
 ];
@@ -161,6 +186,20 @@ const computeZoneRisks = (cascadeEffects, globalRisk) => {
         const primary_threat = Object.entries(contributions)
             .sort((a, b) => b[1] - a[1])[0][0];
 
+        // ── Enterprise Vulnerability Index calculation ─────────────────────
+        // VI_z = 0.30*P_z + 0.25*H_z^{-1} + 0.20*C_z + 0.15*I_z + 0.10*S_z
+        const vulnerability_score = parseFloat((
+            0.30 * (zone.pop_density_norm || 0) +
+            0.25 * (zone.hospital_cap_inv || 0) +
+            0.20 * (zone.historical_crises || 0) +
+            0.15 * (zone.infrastructure_stress || 0) +
+            0.10 * (zone.socioeconomic_sensitivity || 0)
+        ).toFixed(4));
+
+        let vulnerability_label = 'LOW';
+        if (vulnerability_score >= 0.7) vulnerability_label = 'HIGH';
+        else if (vulnerability_score >= 0.4) vulnerability_label = 'MODERATE';
+
         return {
             id: zone.id,
             name: zone.name,
@@ -175,6 +214,13 @@ const computeZoneRisks = (cascadeEffects, globalRisk) => {
             alert_level: alert.label,
             alert_color: alert.color,
             primary_threat,
+            pop_density_norm: zone.pop_density_norm,
+            hospital_cap_inv: zone.hospital_cap_inv,
+            historical_crises: zone.historical_crises,
+            infrastructure_stress: zone.infrastructure_stress,
+            socioeconomic_sensitivity: zone.socioeconomic_sensitivity,
+            vulnerability_score,
+            vulnerability_label,
             is_affected: risk_score > ZONE_ALERT_LEVELS.SAFE.max,
             evacuation_priority: risk_score >= ZONE_ALERT_LEVELS.WARNING.max,
         };

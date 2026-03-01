@@ -248,6 +248,25 @@ export const getForecast = async (days: number = 7) => {
   }
 };
 
+export const getScenarioForecast = async (params: { scenario_traffic_delta: number; scenario_industry_delta: number; days_ahead?: number; }) => {
+  try {
+    const response = await api.post('/forecast/scenario', params);
+    const d = response.data;
+    if (!d || d.success === false) throw new Error('ML API error');
+    return d;
+  } catch (error) {
+    console.warn('Backend ML online prediction failed, returning mock delta:', error);
+    // Return a mock shifted forecast representing the delta
+    const mockShift = (params.scenario_traffic_delta * 0.4 + params.scenario_industry_delta * 0.3) * 100;
+    return {
+      mode: 'mock_scenario',
+      labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'],
+      aqi_forecast: mockForecast.aqi_forecast.map(v => Math.max(0, v + mockShift)),
+      water_stress_forecast: mockForecast.water_stress_forecast.map(v => Math.max(0, v + (mockShift / 1000))),
+      scenario_applied: true
+    };
+  }
+};
 
 export const getRecommendations = async (cityId?: string) => {
   try {
@@ -292,6 +311,13 @@ export const getZones = async () => {
       evacuation_priority: z.evacuation_priority ?? false,
       primary_threat: z.primary_threat ?? z.primary_threats?.[0] ?? 'UNKNOWN',
       population: z.population ?? null,
+      pop_density_norm: z.pop_density_norm,
+      hospital_cap_inv: z.hospital_cap_inv,
+      historical_crises: z.historical_crises,
+      infrastructure_stress: z.infrastructure_stress,
+      socioeconomic_sensitivity: z.socioeconomic_sensitivity,
+      vulnerability_score: z.vulnerability_score,
+      vulnerability_label: z.vulnerability_label,
     }));
 
     return { zones };
@@ -325,9 +351,9 @@ export const getZoneDetail = async (zoneId: string) => {
   }
 };
 
-export const getHistory = async () => {
+export const getHistory = async (cityId?: string) => {
   try {
-    const response = await api.get('/history');
+    const response = await api.get('/history', { params: { cityId } });
     const d = response.data;
     if (!d || d.success === false || d.error) throw new Error('Backend error');
 

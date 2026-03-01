@@ -37,9 +37,15 @@ router.get('/', async (req, res, next) => {
     try {
         const limit = parseInt(req.query.days) || 7;
         const heatwaveLevel = parseFloat(req.query.heatwaveLevel) || 0;
+        const cityId = req.query.cityId;
 
-        // Fetch historical data oldest → newest
-        const records = await EnvironmentalData.find()
+        // Fetch historical data oldest → newest for specific city if provided
+        let query = {};
+        if (cityId) {
+            query.cityId = cityId;
+        }
+
+        const records = await EnvironmentalData.find(query)
             .sort({ date: 1 })
             .limit(limit);
 

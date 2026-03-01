@@ -23,6 +23,10 @@ def load_models(models_dir: str = "models"):
     """
     logger.info("Loading pre-trained models...")
     
+    # Resolve absolute path for models directory relative to this file
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    resolved_models_dir = os.path.join(base_dir, models_dir)
+
     model_files = {
         "aqi_model": "aqi.pkl",
         "water_model": "water.pkl",
@@ -33,7 +37,7 @@ def load_models(models_dir: str = "models"):
 
     loaded_count = 0
     for attr, filename in model_files.items():
-        filepath = os.path.join(models_dir, filename)
+        filepath = os.path.join(resolved_models_dir, filename)
         if os.path.exists(filepath):
             try:
                 model = joblib.load(filepath)

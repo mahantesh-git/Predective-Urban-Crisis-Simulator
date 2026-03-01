@@ -90,4 +90,59 @@ router.get('/', async (req, res, next) => {
     }
 });
 
+/**
+ * POST /forecast/scenario
+ * Generates an ML forecast modified by a policy scenario.
+ */
+router.post('/scenario', async (req, res, next) => {
+    try {
+        const { scenario_traffic_delta = 0, scenario_industry_delta = 0, days_ahead = 7 } = req.body;
+
+        // Fetch recent historical data to seed the ML model
+        const history = await EnvironmentalData.find().sort({ date: -1 }).limit(14).lean();
+        history.reverse(); // oldest to newest
+
+        const history_aqi = history.map(h => h.aqi);
+        const history_water = history.map(h => h.water_quality);
+
+        if (!process.env.ML_URL) {
+            process.env.ML_URL = 'http://localhost:8001';
+        }
+
+        // Forward to python microservice
+        const fetch = require('node-fetch');
+        const mlResponse = await fetch(`${process.env.ML_URL}/forecast/multi-horizon/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                history_aqi,
+                history_water,
+                horizon_days: days_ahead,
+                scenario_traffic_delta,
+                scenario_industry_delta
+            })
+        });
+
+        if (!mlResponse.ok) {
+            throw new Error(`ML Service responded with ${mlResponse.status}`);
+        }
+
+        const mlData = await mlResponse.json();
+
+        res.json({
+            success: true,
+            mode: mlData.model_strategy_used,
+            labels: mlData.labels,
+            aqi_forecast: mlData.forecasts.aqi,
+            water_stress_forecast: mlData.forecasts.water_stress,
+            confidence_bands: mlData.confidence_intervals,
+            explainable_ai: mlData.explainable_ai
+        });
+
+    } catch (err) {
+        console.error('Failed to query ML scenario endpoint:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 module.exports = router;
