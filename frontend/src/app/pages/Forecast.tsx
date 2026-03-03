@@ -54,7 +54,7 @@ export function Forecast() {
 
   const loadForecast = async (days: number) => {
     try {
-      const raw = await getForecast(days);
+      const raw = await getForecast(days, city.id);
       const m = city.riskMultiplier;
       const baseAqi = city.baseAqi;
 

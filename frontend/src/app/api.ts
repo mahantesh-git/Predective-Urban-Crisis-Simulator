@@ -176,9 +176,9 @@ export const mockHistory = {
 // API functions — with backend response transformation to frontend interfaces
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const getStatus = async () => {
+export const getStatus = async (cityId?: string) => {
   try {
-    const response = await api.get('/status');
+    const response = await api.get('/status', { params: { cityId } });
     const d = response.data;
     if (!d || d.success === false || d.error) throw new Error('Backend error');
 
@@ -214,9 +214,9 @@ export const getStatus = async () => {
   }
 };
 
-export const getForecast = async (days: number = 7) => {
+export const getForecast = async (days: number = 7, cityId?: string) => {
   try {
-    const response = await api.get('/forecast', { params: { days } });
+    const response = await api.get('/forecast', { params: { days, cityId } });
     const d = response.data;
     if (!d || d.success === false || d.error) throw new Error('Backend error');
 
@@ -296,9 +296,9 @@ export const getRecommendations = async (cityId?: string) => {
   }
 };
 
-export const getZones = async () => {
+export const getZones = async (cityId?: string) => {
   try {
-    const response = await api.get('/zones');
+    const response = await api.get('/zones', { params: { cityId } });
     const d = response.data;
     if (!d || d.success === false || d.error) throw new Error('Backend error');
 
@@ -327,9 +327,9 @@ export const getZones = async () => {
   }
 };
 
-export const getZoneDetail = async (zoneId: string) => {
+export const getZoneDetail = async (zoneId: string, cityId?: string) => {
   try {
-    const response = await api.get(`/zones/${zoneId}`);
+    const response = await api.get(`/zones/${zoneId}`, { params: { cityId } });
     const d = response.data;
     if (!d || d.success === false || d.error) throw new Error('Backend error');
 

@@ -12,8 +12,10 @@ import { useCity } from '../context/CityContext';
 import { VulnerabilityRadarCore } from '../components/analytics/VulnerabilityRadarCore';
 
 interface Zone {
-  zone_id: string;
+  id: string;
   name: string;
+  description?: string;
+  type?: string;
   alert_level: string;
   risk_score: number;
   evacuation_priority: boolean;
@@ -40,32 +42,8 @@ export function Zones() {
 
   const loadZones = async () => {
     try {
-      const data = await getZones();
-      const m = city.riskMultiplier;
-
-      // Merge city-specific zone names and descriptions over backend risk data
-      const merged = {
-        ...data,
-        zones: (data.zones || []).map((zone: any, index: number) => {
-          const cityZone = city.zones[index];
-          const risk_score = Math.min((zone.risk_score || 0) * m, 1);
-          let alert_level = 'SAFE';
-          if (risk_score > 0.8) alert_level = 'CRITICAL';
-          else if (risk_score > 0.6) alert_level = 'WARNING';
-          else if (risk_score > 0.4) alert_level = 'WATCH';
-
-          return {
-            ...zone,
-            risk_score,
-            alert_level,
-            evacuation_priority: risk_score >= 0.6,
-            name: cityZone?.name ?? zone.name,
-            description: cityZone?.description ?? zone.description,
-            population: cityZone?.population ?? zone.population,
-          };
-        }),
-      };
-      setZonesData(merged);
+      const data = await getZones(city.id);
+      setZonesData(data);
     } catch (error) {
       console.error('Failed to load zones:', error);
     } finally {
@@ -77,7 +55,7 @@ export function Zones() {
     setDetailLoading(true);
     setSelectedZone(zoneId);
     try {
-      const data = await getZoneDetail(zoneId);
+      const data = await getZoneDetail(zoneId, city.id);
       setZoneDetail(data);
     } catch (error) {
       console.error('Failed to load zone detail:', error);
@@ -135,13 +113,13 @@ export function Zones() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {zonesData.zones.map((zone) => (
-            <Sheet key={zone.zone_id}>
+            <Sheet key={zone.id}>
               <SheetTrigger asChild>
                 <Card
                   className={`bg-card border-2 ${getAlertBorderColor(
                     zone.alert_level
-                  )} p-6 cursor-pointer hover:scale-105 transition-transform shadow-sm`}
-                  onClick={() => loadZoneDetail(zone.zone_id)}
+                  )} p-6 cursor-pointer hover:scale-105 transition-transform shadow-sm flex flex-col justify-between h-full`}
+                  onClick={() => loadZoneDetail(zone.id)}
                 >
                   {zone.evacuation_priority && (
                     <div className="mb-4 p-2 bg-red-500/10 border border-red-500 rounded-lg flex items-center gap-2">
@@ -174,7 +152,10 @@ export function Zones() {
                       <span className="text-muted-foreground font-medium flex items-center gap-1">Primary Threat</span>
                       <span className="text-card-foreground font-semibold">{zone.primary_threat.replace(/_/g, ' ')}</span>
                     </div>
-                    <div className="flex items-center justify-between text-sm">
+                    {zone.description && (
+                      <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{zone.description}</p>
+                    )}
+                    <div className="flex items-center justify-between text-sm mt-3">
                       <span className="text-muted-foreground font-medium flex items-center gap-1">
                         <Users className="w-3 h-3" />
                         Population
@@ -209,7 +190,7 @@ export function Zones() {
                         <div className="grid grid-cols-2 gap-8 relative z-10">
                           <div>
                             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Zone ID</p>
-                            <p className="text-lg font-bold text-white mt-1">{zone.zone_id}</p>
+                            <p className="text-lg font-bold text-white mt-1">{zone.id}</p>
                           </div>
                           <div>
                             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Current Risk</p>

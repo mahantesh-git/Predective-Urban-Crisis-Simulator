@@ -25,8 +25,11 @@ const { computeRisk } = require('../engine/cascadeEngine');
  */
 router.get('/', async (req, res, next) => {
     try {
-        // Fetch the most recent environmental reading
-        const latest = await EnvironmentalData.findOne().sort({ date: -1 });
+        // Accept cityId from query param, default to 'bengaluru'
+        const cityId = req.query.cityId || 'bengaluru';
+
+        // Fetch the most recent environmental reading for this city
+        const latest = await EnvironmentalData.findOne({ cityId }).sort({ date: -1 });
 
         if (!latest) {
             return res.status(404).json({

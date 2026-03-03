@@ -1,5 +1,6 @@
-import os
 import joblib
+import pickle
+import os
 import logging
 
 logger = logging.getLogger("smart_city_ml")
@@ -40,7 +41,13 @@ def load_models(models_dir: str = "models"):
         filepath = os.path.join(resolved_models_dir, filename)
         if os.path.exists(filepath):
             try:
-                model = joblib.load(filepath)
+                # Use pickle for Prophet models, joblib for others
+                if filename in ["aqi.pkl", "water.pkl"]:
+                    with open(filepath, 'rb') as f:
+                        model = pickle.load(f)
+                else:
+                    model = joblib.load(filepath)
+                
                 setattr(registry, attr, model)
                 logger.info(f"Successfully loaded {filename}")
                 loaded_count += 1

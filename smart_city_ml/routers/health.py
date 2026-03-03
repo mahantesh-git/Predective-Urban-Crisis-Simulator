@@ -22,13 +22,19 @@ async def predict_health(request: HealthPredictionRequest, registry: ModelRegist
         return HealthPredictionResponse(risk_level=risk)
 
     try:
-        # Prepare input features matching the classifier's expected format
+        # Prepare input features matching the classifier's expected format (11 features)
         features = pd.DataFrame([{
             "aqi": request.aqi,
             "temperature": request.temperature,
             "humidity": request.humidity,
             "population_density": request.population_density,
-            "water_quality": request.water_quality_index
+            "water_quality": request.water_quality_index,
+            "hospital_beds_per1k": request.hospital_beds_per1k,
+            "literacy_rate": request.literacy_rate,
+            "month": request.month,
+            "monsoon": request.monsoon,
+            "avg_rainfall": request.avg_rainfall,
+            "max_temp": request.max_temp
         }])
         
         prediction = int(model.predict(features)[0])

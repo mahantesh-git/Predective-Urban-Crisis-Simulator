@@ -32,18 +32,21 @@ const { generateForecast } = require('../engine/forecastEngine');
  */
 router.get('/', async (req, res, next) => {
     try {
+        // Accept cityId from query param, default to 'bengaluru'
+        const cityId = req.query.cityId || 'bengaluru';
+
         // Allow frontend to request a custom number of days via ?days=N
         const defaultDays = parseInt(process.env.FORECAST_DAYS || '7', 10);
         const requestedDays = parseInt(req.query.days || defaultDays, 10);
         const forecastDays = Math.min(Math.max(requestedDays, 7), 365); // clamp 7–365
 
-        // Fetch all available historical data sorted oldest → newest
-        const historicalData = await EnvironmentalData.find().sort({ date: 1 });
+        // Fetch all available historical data for this city sorted oldest → newest
+        const historicalData = await EnvironmentalData.find({ cityId }).sort({ date: 1 });
 
         if (!historicalData.length) {
             return res.status(404).json({
                 success: false,
-                error: 'No environmental data found. Please run `npm run seed` first.',
+                error: `No environmental data found for city '${cityId}'. Please run \`npm run seed\` first.`,
             });
         }
 
