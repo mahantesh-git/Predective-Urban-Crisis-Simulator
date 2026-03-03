@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+.venv/
+
+# Environment
+.env
+
+# Build output
+dist/
+build/
+
+# Logs
+*.log
+
+# Datasets & data files
+datasets/
+*.csv
+*.xlsx
+*.xls
+*.nc4
+
+# Archives & binaries
+*.zip
+*.pdf
+
+# Temp files
+temp_status*.json
+
+# ML temp/data directories
+smart_city_ml/full_*_extract/
+smart_city_ml/ground_truth/
+smart_city_ml/temp_extract/
+smart_city_ml/temp_xml/
+smart_city_ml/aod_model_*/
+smart_city_ml/aod_worker/
+smart_city_ml/data/
+
+# Python cache
+__pycache__/
+*.pyc
+
+#datasets
+datasets/
