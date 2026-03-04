@@ -1,6 +1,8 @@
 import os
 import joblib
 import logging
+import json
+from prophet.serialize import model_from_json
 
 logger = logging.getLogger("smart_city_ml")
 
@@ -28,19 +30,24 @@ def load_models(models_dir: str = "models"):
     resolved_models_dir = os.path.join(base_dir, models_dir)
 
     model_files = {
-        "aqi_model": "aqi.pkl",
-        "water_model": "water.pkl",
-        "health_model": "health.pkl",
-        "forest_model": "forest.pkl",
-        "traffic_model": "traffic.pkl"
+        "aqi_model": {"filename": "aqi.json", "type": "prophet"},
+        "water_model": {"filename": "water.json", "type": "prophet"},
+        "health_model": {"filename": "health.pkl", "type": "joblib"},
+        "forest_model": {"filename": "forest.pkl", "type": "joblib"},
+        "traffic_model": {"filename": "traffic.pkl", "type": "joblib"}
     }
 
     loaded_count = 0
-    for attr, filename in model_files.items():
+    for attr, info in model_files.items():
+        filename = info["filename"]
         filepath = os.path.join(resolved_models_dir, filename)
         if os.path.exists(filepath):
             try:
-                model = joblib.load(filepath)
+                if info["type"] == "prophet":
+                    with open(filepath, 'r') as f:
+                        model = model_from_json(f.read())
+                else:
+                    model = joblib.load(filepath)
                 setattr(registry, attr, model)
                 logger.info(f"Successfully loaded {filename}")
                 loaded_count += 1

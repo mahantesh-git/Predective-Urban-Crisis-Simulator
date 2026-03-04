@@ -55,27 +55,13 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 // Raw OpenAPI JSON
 app.get('/docs.json', (req, res) => res.json(swaggerSpec));
 
-// ── API Routes ────────────────────────────────────────────────────────────────
-/**
- * GET  /status               → Current crisis metrics
- * POST /simulate             → Policy scenario simulation
- * POST /simulate/compare     → Multi-scenario comparison (NEW)
- * GET  /simulate/history     → Past simulation records
- * GET  /forecast             → 7-day AQI + water forecast
- * GET  /recommendations      → Ranked mitigation strategies
- * GET  /zones                → Per-zone affected area forecast
- * GET  /zones/:id            → Single zone detail
- * POST /data                 → Real-time environmental data ingestion (NEW)
- * GET  /data                 → Paginated data records (NEW)
- * GET  /history              → 7-day trend data for charts (NEW)
- * GET  /docs                 → Swagger interactive API docs (NEW)
- */
+// ── Public Routes (no auth) ───────────────────────────────────────────────────
 app.use('/status', statusRoute);
-app.use('/simulate', simulationLimiter, simulateRoute);  // compute-heavy → stricter limit
+app.use('/simulate', simulationLimiter, simulateRoute);
 app.use('/forecast', forecastRoute);
 app.use('/recommendations', recommendationsRoute);
 app.use('/zones', zonesRoute);
-app.use('/data', dataIngestLimiter, dataRoute);      // ingest → dedicated limit
+app.use('/data', dataIngestLimiter, dataRoute);
 app.use('/history', historyRoute);
 app.use('/deforestation', deforestationRoute);
 
@@ -98,10 +84,7 @@ app.use((req, res) => {
             'POST /data',
             'GET  /data',
             'GET  /history',
-            'GET  /deforestation/overview',
-            'GET  /deforestation/risk',
-            'GET  /deforestation/national',
-            'GET  /deforestation/drought',
+            'GET  /deforestation/*',
         ],
     });
 });
@@ -122,16 +105,17 @@ server.listen(PORT, () => {
     console.log(`📡 WebSocket Feed          →  ws://localhost:${PORT}`);
     console.log(`🔮 ML Mode: ${process.env.ML_ENABLED === 'true' ? '🤖 ML Service' : '🔮 Mock Forecast'}`);
     console.log(`\n   Endpoints:`);
+    console.log(`   GET  /ping`);
+    console.log(`   GET  /docs`);
     console.log(`   GET  /status`);
-    console.log(`   POST /simulate          (rate: 30/15min)`);
+    console.log(`   POST /simulate`);
     console.log(`   POST /simulate/compare`);
     console.log(`   GET  /forecast`);
     console.log(`   GET  /recommendations`);
     console.log(`   GET  /zones`);
-    console.log(`   POST /data              (rate: 60/15min)`);
+    console.log(`   POST /data`);
     console.log(`   GET  /history`);
-    console.log(`   GET  /deforestation/*    (overview, risk, national, drought)`);
-    console.log(`   GET  /docs\n`);
+    console.log(`   GET  /deforestation/*\n`);
 });
 
 module.exports = app;

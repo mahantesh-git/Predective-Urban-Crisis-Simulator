@@ -1,8 +1,10 @@
 import os
+import json
 import pandas as pd
 import numpy as np
 import joblib
 from prophet import Prophet
+from prophet.serialize import model_to_json
 from xgboost import XGBClassifier, XGBRegressor
 
 # Ensure target directory exists
@@ -15,7 +17,8 @@ df_aqi = pd.DataFrame({
 })
 aqi_model = Prophet()
 aqi_model.fit(df_aqi)
-joblib.dump(aqi_model, "models/aqi.pkl")
+with open("models/aqi.json", "w") as f:
+    f.write(model_to_json(aqi_model))
 
 print("Training placeholder Water model (Prophet)...")
 df_water = pd.DataFrame({
@@ -24,7 +27,8 @@ df_water = pd.DataFrame({
 })
 water_model = Prophet()
 water_model.fit(df_water)
-joblib.dump(water_model, "models/water.pkl")
+with open("models/water.json", "w") as f:
+    f.write(model_to_json(water_model))
 
 print("Training placeholder Health model (XGBClassifier)...")
 # Features: aqi, temperature, humidity, population_density, water_quality_index
