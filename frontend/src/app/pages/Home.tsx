@@ -1,9 +1,11 @@
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { AlertCircle, MapPin } from 'lucide-react';
+import { useCity } from '../context/CityContext';
 
 export function Home() {
     const navigate = useNavigate();
+    const { city } = useCity();
 
     return (
         <main className="min-h-screen bg-[#EAE3D6] flex flex-col justify-between font-sans selection:bg-[#C05A1A] selection:text-white">
@@ -15,8 +17,8 @@ export function Home() {
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/50 border border-[#4b2e1e]/10 shadow-sm backdrop-blur-sm">
                         <MapPin className="w-3.5 h-3.5 text-[#C05A1A]" />
-                        <span className="text-xs font-bold tracking-wide">Bengaluru</span>
-                        <span className="text-xs text-[#6B4A34]">· Karnataka, India</span>
+                        <span className="text-xs font-bold tracking-wide">{city.name}</span>
+                        <span className="text-xs text-[#6B4A34]">· {city.state}, India</span>
                     </div>
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/50 border border-[#4b2e1e]/10 shadow-sm backdrop-blur-sm">
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
@@ -41,7 +43,7 @@ export function Home() {
                         </span>
                         <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#4b2e1e]/20 bg-white/60 text-[#4B2E1E] text-xs font-medium tracking-wide">
                             <MapPin className="w-3.5 h-3.5 text-[#C05A1A]" />
-                            Bengaluru Metropolitan Area · Karnataka, India
+                            {city.name} Metropolitan Area · {city.state}, India
                         </span>
                     </motion.div>
 
@@ -61,7 +63,7 @@ export function Home() {
                         transition={{ duration: 0.8, delay: 0.6 }}
                         className="mt-8 text-lg md:text-xl text-[#6B4A34] max-w-2xl mx-auto leading-relaxed font-light"
                     >
-                        Bengaluru is on the edge. CitySentinel uses predictive Monte Carlo simulations and zone-level forecasting to reveal the layers of urban crisis — from Bellandur Lake to Silk Board — before they strike.
+                        {city.name} is on the edge. CitySentinel uses predictive Monte Carlo simulations and zone-level forecasting to reveal the layers of urban crisis before they strike.
                     </motion.p>
 
                 </div>

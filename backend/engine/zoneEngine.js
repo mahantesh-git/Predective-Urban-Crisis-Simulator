@@ -15,6 +15,10 @@
  * Each zone has sensitivity weights (0–1) for each cascade sub-system.
  * Zone risk = Σ(sensitivity × cascade_effect_score)
  */
+const fs = require('fs');
+const path = require('path');
+
+const CITY_ZONES_PATH = path.join(__dirname, '../../datasets/city_zones.json');
 
 // ── Zone Definitions ─────────────────────────────────────────────────────────
 const ZONES = [
@@ -121,9 +125,51 @@ const ZONES = [
         historical_crises: 0.6,
         infrastructure_stress: 1.0,
         socioeconomic_sensitivity: 0.6,
-        critical_infrastructure: ['Highway Junction', 'Bus Terminal', 'Freight Depot'],
     },
 ];
+
+const SENSITIVITY_MAP = {
+    INDUSTRIAL: { aqi_risk: 0.90, water_risk: 0.75, health_risk: 0.80, traffic_risk: 0.50 },
+    RESIDENTIAL: { aqi_risk: 0.70, water_risk: 0.95, health_risk: 0.95, traffic_risk: 0.40 },
+    COMMERCIAL: { aqi_risk: 0.80, water_risk: 0.60, health_risk: 0.75, traffic_risk: 0.90 },
+    TRANSPORT: { aqi_risk: 0.85, water_risk: 0.35, health_risk: 0.55, traffic_risk: 1.00 },
+    ECOLOGICAL: { aqi_risk: 0.60, water_risk: 1.00, health_risk: 0.50, traffic_risk: 0.20 }
+};
+
+const getCityZones = (cityId) => {
+    try {
+        if (!fs.existsSync(CITY_ZONES_PATH)) return ZONES;
+        const raw = fs.readFileSync(CITY_ZONES_PATH, 'utf8');
+        const data = JSON.parse(raw);
+        if (data[cityId] && data[cityId].length > 0) {
+            return data[cityId].map((z) => {
+                const sens = SENSITIVITY_MAP[z.type] || SENSITIVITY_MAP.RESIDENTIAL;
+                const hh_size = z.population / Math.max(z.households, 1);
+                const p_norm = Math.min(hh_size / 8, 1.0); // Simple proxy for density norm
+
+                return {
+                    id: z.id,
+                    name: z.name,
+                    type: z.type,
+                    description: z.description,
+                    population: z.population,
+                    sensitivity: sens,
+                    population_density: p_norm > 0.7 ? 'HIGH' : (p_norm > 0.4 ? 'MEDIUM' : 'LOW'),
+                    pop_density_norm: parseFloat(p_norm.toFixed(2)),
+                    hospital_cap_inv: parseFloat((1.0 - z.literacy_rate).toFixed(2)),
+                    historical_crises: 0.5,
+                    infrastructure_stress: parseFloat(Math.min(z.workforce_ratio * 1.5, 1).toFixed(2)),
+                    socioeconomic_sensitivity: parseFloat((1.0 - z.literacy_rate).toFixed(2)),
+                    critical_infrastructure: [],
+                    coordinates: null
+                };
+            });
+        }
+    } catch (e) {
+        console.error('Error reading city_zones.json:', e);
+    }
+    return ZONES; // Fallback to Bengaluru hardcoded
+};
 
 // Alert thresholds per zone risk score
 const ZONE_ALERT_LEVELS = {
@@ -149,12 +195,14 @@ const getAlertLevel = (score) => {
  *
  * @param {Object} cascadeEffects - { aqi_risk, water_risk, health_risk, traffic_risk }
  * @param {number} globalRisk     - Overall city risk_score
+ * @param {string} cityId         - City ID to load zones for
  * @returns {Array} List of zone objects with computed risk data
  */
-const computeZoneRisks = (cascadeEffects, globalRisk) => {
+const computeZoneRisks = (cascadeEffects, globalRisk, cityId = 'bengaluru') => {
     const margin = parseFloat(process.env.CONFIDENCE_MARGIN || '0.15');
+    const targetZones = getCityZones(cityId);
 
-    return ZONES.map((zone) => {
+    return targetZones.map((zone) => {
         const { sensitivity } = zone;
 
         // Weighted zone risk = dot product of sensitivity × cascade effects
@@ -269,4 +317,4 @@ const generateZoneForecast = (zoneResults, historicalData) => {
     });
 };
 
-module.exports = { computeZoneRisks, generateZoneForecast, ZONES, getAlertLevel };
+module.exports = { computeZoneRisks, generateZoneForecast, ZONES, getCityZones, getAlertLevel };

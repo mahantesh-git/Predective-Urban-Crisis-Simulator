@@ -41,3 +41,27 @@ __pycache__/
 
 #datasets
 datasets/
+
+node_modules/
+.env
+dist/
+build/
+*.log
+datasets/
+*.csv
+*.xlsx
+*.xls
+*.zip
+*.pdf
+temp_status*.json
+smart_city_ml/full_*_extract/
+smart_city_ml/ground_truth/
+smart_city_ml/temp_extract/
+smart_city_ml/temp_xml/
+smart_city_ml/__pycache__/
+smart_city_ml/aod_model_*/
+smart_city_ml/aod_worker/
+smart_city_ml/data/
+*.nc4
+__pycache__/
+.venv/

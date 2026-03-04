@@ -1,4 +1,20 @@
-const { predictAQI, predictWater, predictHealth } = require('../services/mlServiceClient');
+const { predictAQI, predictWater, predictHealth, predictTraffic, predictForest } = require('../services/mlServiceClient');
+const fs = require('fs');
+const path = require('path');
+
+const CITY_METADATA_PATH = path.join(__dirname, '../../datasets/city_metadata.json');
+
+const getCityMetadata = (cityId) => {
+    try {
+        if (fs.existsSync(CITY_METADATA_PATH)) {
+            const data = JSON.parse(fs.readFileSync(CITY_METADATA_PATH, 'utf8'));
+            return data[cityId] || data['bengaluru'];
+        }
+    } catch (e) {
+        console.error('Error loading city metadata:', e);
+    }
+    return null;
+};
 
 /**
  * Forecast Engine
@@ -34,7 +50,7 @@ const MARGIN = parseFloat(process.env.CONFIDENCE_MARGIN || '0.15');
  * Transform the multi-model responses into the standard forecast shape acceptable by the frontend.
  * Stitches together Prophet time-series data with XGBoost Health labels to simulate the old API response.
  */
-const transformNewMLResponse = (aqiResult, waterResult, healthResult) => {
+const transformNewMLResponse = (aqiResult, waterResult, healthResult, trafficResult, forestResult) => {
     const aqi_forecast = aqiResult.forecast.map(f => f.prediction);
     const aqi_lower = aqiResult.forecast.map(f => f.lower_bound);
     const aqi_upper = aqiResult.forecast.map(f => f.upper_bound);
@@ -44,9 +60,19 @@ const transformNewMLResponse = (aqiResult, waterResult, healthResult) => {
     const water_upper = waterResult.forecast.map(f => f.upper_bound);
 
     let prob = 0.2;
-    if (healthResult?.risk_level === 'CRITICAL') prob = 0.95;
-    if (healthResult?.risk_level === 'HIGH') prob = 0.75;
-    if (healthResult?.risk_level === 'MODERATE') prob = 0.45;
+    // Health Signal
+    if (healthResult?.risk_level === 'CRITICAL') prob += 0.4;
+    else if (healthResult?.risk_level === 'HIGH') prob += 0.3;
+    else if (healthResult?.risk_level === 'MODERATE') prob += 0.15;
+
+    // Traffic Signal
+    if (trafficResult?.traffic_status === 'CONGESTED') prob += 0.2;
+    else if (trafficResult?.traffic_status === 'HEAVY') prob += 0.1;
+
+    // Forest Signal (High loss increases probability of urban heat/flooding)
+    if (forestResult?.predicted_forest_loss > 100) prob += 0.15;
+
+    prob = Math.min(prob, 0.98);
 
     // Contest Required Outputs Generation
     const maxAqi = Math.max(...aqi_forecast);
@@ -63,16 +89,16 @@ const transformNewMLResponse = (aqiResult, waterResult, healthResult) => {
         timeToImpact = `${criticalDayAqi} days (Severe Smog)`;
     } else if (criticalDayWater !== -1) {
         timeToImpact = `${criticalDayWater} days (Water Shortage)`;
-    } else if (prob > 0.5) {
-        timeToImpact = `Elevated risk within ${Math.floor(aqi_forecast.length / 2)} days`;
+    } else if (prob > 0.6) {
+        timeToImpact = `Elevated risk within ${Math.floor(aqi_forecast.length / 3)} days`;
     }
 
     // Affected Zone Forecast (simulated spatial output based on risk)
     const allZones = ['Industrial Zone North', 'Downtown Core', 'Residential Ring East', 'Waterfront District', 'Tech Park South'];
     let affectedZones = [];
-    if (maxAqi > 250) affectedZones.push('Industrial Zone North', 'Downtown Core');
-    if (maxWater > 70) affectedZones.push('Residential Ring East', 'Waterfront District');
-    if (prob > 0.8) affectedZones.push('Tech Park South');
+    if (maxAqi > 250) affectedZones.push('Industrial Area', 'Downtown Core');
+    if (maxWater > 70) affectedZones.push('Residential District', 'Waterfront Zone');
+    if (prob > 0.8) affectedZones.push('Transport Gateway');
     if (affectedZones.length === 0) affectedZones = ['Routine Monitoring Across All Zones'];
 
     // Recommended Policy Actions (Dynamic Rule-Based Engine)
@@ -83,28 +109,27 @@ const transformNewMLResponse = (aqiResult, waterResult, healthResult) => {
         policies.push('Declare Public Health Emergency: Total Industrial Halt', 'Emergency Green-Zone Oxygen Hubs deployment');
     } else if (maxAqi > 200) {
         policies.push('Enact Stage 2 Vehicle Rationing', 'Halt non-essential construction');
-    } else if (maxAqi > 120) {
-        policies.push('Optimize traffic flow via AI-grid signaling', 'Public advisory: N95/FFP2 mask usage');
     }
 
     // Water Based Triggers
     if (maxWater > 85) {
         policies.push('Category A Water Rationing (Essential services only)', 'Mandatory IoT leak-detection sweep');
     } else if (maxWater > 60) {
-        policies.push('Divert emergency reservoir allocations', 'Issue boil-water advisories');
-    } else if (maxWater > 40) {
-        policies.push('Automated irrigation suspension for public parks', 'Industrial greywater recycle mandate');
+        policies.push('Divert emergency reservoir allocations');
     }
 
     // Health / Probability Based Triggers
     if (prob > 0.85) {
-        policies.push('Pre-emptive hospital surge-capacity activation', 'Aloft-drone cooling in dense thermal hotspots');
-    } else if (prob > 0.6) {
-        policies.push('Deploy mobile health clinics to high-risk zones', 'Senior citizen wellness checks automated via VitalsAPI');
+        policies.push('Pre-emptive hospital surge-capacity activation');
+    }
+
+    // Forest Loss Based Triggers
+    if (forestResult?.predicted_forest_loss > 50) {
+        policies.push('Implement Urban Green Corridor Taskforce', 'Restrict rapid land-conversion permits');
     }
 
     if (policies.length === 0) {
-        policies.push('Maintain standard environmental protocols', 'Ongoing background sensor validation');
+        policies.push('Maintain standard environmental protocols');
     }
 
     return {
@@ -116,11 +141,15 @@ const transformNewMLResponse = (aqiResult, waterResult, healthResult) => {
         },
         mode: 'ml_service',
         note: 'Powered by 5 dedicated modular ML models (Prophet/XGBoost).',
-        crisis_probability: prob,
+        crisis_probability: parseFloat(prob.toFixed(2)),
         crisis_status: healthResult?.risk_level || 'UNKNOWN',
         time_to_impact_days: timeToImpact,
         affected_zones: [...new Set(affectedZones)],
         recommended_policies: policies,
+        external_signals: {
+            traffic: trafficResult?.traffic_status,
+            forest_loss_ha: forestResult?.predicted_forest_loss
+        }
     };
 };
 
@@ -218,24 +247,50 @@ const mockForecast = (historicalData, days = DEFAULT_FORECAST_DAYS) => {
 
 const generateForecast = async (historicalData, days = DEFAULT_FORECAST_DAYS) => {
     const mlEnabled = process.env.ML_ENABLED === 'true';
+    const cityId = historicalData[0]?.cityId || 'bengaluru';
 
     if (mlEnabled) {
         const latest = historicalData[historicalData.length - 1] || {};
+        const meta = getCityMetadata(cityId);
 
-        const [aqiResult, waterResult, healthResult] = await Promise.all([
+        const [aqiResult, waterResult, healthResult, trafficResult, forestResult] = await Promise.all([
             predictAQI({ days }),
             predictWater({ days }),
             predictHealth({
                 aqi: latest.aqi || 100,
                 temperature: latest.temperature || 30.0,
                 humidity: 60.0,
-                population_density: 5000.0,
-                water_quality_index: latest.water_quality || 50.0
+                population_density: meta.pop_density,
+                water_quality_index: latest.water_quality || 50.0,
+                hospital_beds_per1k: meta.hospital_beds_per1k,
+                literacy_rate: meta.literacy_rate,
+                month: new Date().getMonth() + 1,
+                monsoon: (new Date().getMonth() + 1 >= 6 && new Date().getMonth() + 1 <= 9) ? 1 : 0,
+                avg_rainfall: meta.avg_rainfall,
+                max_temp: meta.max_temp
+            }),
+            predictTraffic({
+                time_of_day: new Date().getHours(),
+                day_of_week: new Date().getDay(),
+                traffic_density: (latest.traffic || 0) * 1.5, // Scale to density
+                temperature: latest.temperature || 30.0,
+                population_density: meta.pop_density,
+                household_density: meta.household_density,
+                month: new Date().getMonth() + 1,
+                summer: (new Date().getMonth() + 1 >= 3 && new Date().getMonth() + 1 <= 6) ? 1 : 0
+            }),
+            predictForest({
+                rainfall: (meta.avg_rainfall / 365) * 2,
+                urban_expansion_rate: 0.5 + meta.workforce_ratio * 2 - meta.literacy_rate,
+                forest_cover_ha: 100000 - meta.pop_density * 5,
+                population_density: meta.pop_density,
+                avg_rainfall: meta.avg_rainfall,
+                workforce_ratio: meta.workforce_ratio
             })
         ]);
 
         if (aqiResult && waterResult && healthResult) {
-            return transformNewMLResponse(aqiResult, waterResult, healthResult);
+            return transformNewMLResponse(aqiResult, waterResult, healthResult, trafficResult, forestResult);
         }
 
         console.warn('Falling back to mock forecast due to partial model service failure.');

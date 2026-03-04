@@ -29,11 +29,12 @@ const { computeZoneRisks, generateZoneForecast } = require('../engine/zoneEngine
  */
 router.get('/', async (req, res, next) => {
     try {
+        const cityId = req.query.cityId || 'bengaluru';
         const heatwaveLevel = parseFloat(req.query.heatwaveLevel) || 0;
         const includeForecast = req.query.forecast === 'true';
 
-        // Get latest environmental reading
-        const latest = await EnvironmentalData.findOne().sort({ date: -1 });
+        // Get latest environmental reading for this city
+        const latest = await EnvironmentalData.findOne({ cityId }).sort({ date: -1 });
 
         if (!latest) {
             return res.status(404).json({
@@ -48,7 +49,7 @@ router.get('/', async (req, res, next) => {
         const cascadeEffects = cascadeResult.cascade_effects;
 
         // Compute per-zone risks
-        const zones = computeZoneRisks(cascadeEffects, globalRisk);
+        const zones = computeZoneRisks(cascadeEffects, globalRisk, cityId);
 
         // Sort by risk (highest first) for prioritized response
         zones.sort((a, b) => b.risk_score - a.risk_score);
@@ -77,7 +78,7 @@ router.get('/', async (req, res, next) => {
 
         // Include 7-day zone forecast if requested
         if (includeForecast) {
-            const historicalData = await EnvironmentalData.find().sort({ date: 1 });
+            const historicalData = await EnvironmentalData.find({ cityId }).sort({ date: 1 });
             response.zone_forecast = generateZoneForecast(zones, historicalData);
         }
 
@@ -94,30 +95,31 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
     try {
         const heatwaveLevel = parseFloat(req.query.heatwaveLevel) || 0;
-        const { ZONES } = require('../engine/zoneEngine');
+        const { getCityZones } = require('../engine/zoneEngine');
+        const cityId = req.query.cityId || 'bengaluru';
+        const cityZones = getCityZones(cityId);
 
-        const zoneDef = ZONES.find((z) => z.id === req.params.id);
+        const zoneDef = cityZones.find((z) => z.id === req.params.id);
         if (!zoneDef) {
             return res.status(404).json({
                 success: false,
                 error: `Zone '${req.params.id}' not found.`,
-                available_zones: ZONES.map((z) => z.id),
+                available_zones: cityZones.map((z) => z.id),
             });
         }
-
-        const latest = await EnvironmentalData.findOne().sort({ date: -1 });
+        const latest = await EnvironmentalData.findOne({ cityId }).sort({ date: -1 });
         if (!latest) {
             return res.status(404).json({ success: false, error: 'No environmental data found.' });
         }
 
         const cascadeResult = computeRisk(latest, heatwaveLevel);
-        const zones = computeZoneRisks(cascadeResult.cascade_effects, cascadeResult.risk_score);
+        const zones = computeZoneRisks(cascadeResult.cascade_effects, cascadeResult.risk_score, cityId);
         const zoneData = zones.find((z) => z.id === req.params.id);
 
         // 7-day forecast always included for single zone
-        const historicalData = await EnvironmentalData.find().sort({ date: 1 });
+        const historicalData = await EnvironmentalData.find({ cityId }).sort({ date: 1 });
         const { generateZoneForecast } = require('../engine/zoneEngine');
-        const forecast = generateZoneForecast([zoneData], historicalData);
+        const forecast = generateZoneForecast([zoneData], historicalData, cityId);
 
         res.json({
             success: true,

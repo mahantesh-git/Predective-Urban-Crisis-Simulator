@@ -1,5 +1,6 @@
-import os
 import joblib
+import pickle
+import os
 import logging
 import json
 from prophet.serialize import model_from_json
@@ -43,11 +44,7 @@ def load_models(models_dir: str = "models"):
         filepath = os.path.join(resolved_models_dir, filename)
         if os.path.exists(filepath):
             try:
-                if info["type"] == "prophet":
-                    with open(filepath, 'r') as f:
-                        model = model_from_json(f.read())
-                else:
-                    model = joblib.load(filepath)
+                model = joblib.load(filepath)
                 setattr(registry, attr, model)
                 logger.info(f"Successfully loaded {filename}")
                 loaded_count += 1

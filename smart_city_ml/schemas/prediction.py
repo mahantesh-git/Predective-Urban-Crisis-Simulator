@@ -34,6 +34,12 @@ class HealthPredictionRequest(BaseModel):
     humidity: float
     population_density: float
     water_quality_index: float
+    hospital_beds_per1k: float = 2.0
+    literacy_rate: float = 0.85
+    month: int = 1
+    monsoon: int = 0
+    avg_rainfall: float = 1000.0
+    max_temp: float = 35.0
 
 class HealthPredictionResponse(BaseModel):
     risk_level: str
@@ -42,7 +48,10 @@ class HealthPredictionResponse(BaseModel):
 class ForestPredictionRequest(BaseModel):
     rainfall: float
     urban_expansion_rate: float
-    previous_forest_area: float
+    forest_cover_ha: float
+    population_density: float
+    avg_rainfall: float
+    workforce_ratio: float
 
 class ForestPredictionResponse(BaseModel):
     predicted_forest_loss: float
@@ -51,8 +60,12 @@ class ForestPredictionResponse(BaseModel):
 class TrafficPredictionRequest(BaseModel):
     time_of_day: int = Field(..., description="Hour of the day 0-23")
     day_of_week: int = Field(..., description="0=Monday, 6=Sunday")
-    vehicle_count: int
-    weather: int = Field(..., description="Categorical weather condition code")
+    traffic_density: float
+    temperature: float
+    population_density: float
+    household_density: float
+    month: int = 1
+    summer: int = 0
 
 class TrafficPredictionResponse(BaseModel):
     traffic_status: str

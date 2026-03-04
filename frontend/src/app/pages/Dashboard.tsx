@@ -99,7 +99,7 @@ export function Dashboard() {
   const loadStatus = async () => {
     try {
       const [data, deforData] = await Promise.all([
-        getStatus(),
+        getStatus(city.id),
         getDeforestationRisk(),
       ]);
 
@@ -248,9 +248,15 @@ export function Dashboard() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Air Quality</p>
-                <p className="text-3xl font-bold text-card-foreground mt-2">{status?.cascade_effects?.aqi_impact ?? 'N/A'}</p>
-                <p className={`text-xs mt-1 font-semibold ${getCrisisTextColor(getLevel(status?.cascade_effects?.aqi_impact / 500))}`}>
-                  {getLevel(status?.cascade_effects?.aqi_impact / 500)}
+                <p className="text-3xl font-bold text-card-foreground mt-2">{status?.latest_data?.aqi ?? 'N/A'}</p>
+                <p className={`text-xs mt-1 font-semibold ${getCrisisTextColor(
+                  status?.latest_data?.aqi >= 200 ? 'CRITICAL' :
+                    status?.latest_data?.aqi >= 101 ? 'HIGH' :
+                      status?.latest_data?.aqi >= 51 ? 'MODERATE' : 'LOW'
+                )}`}>
+                  {status?.latest_data?.aqi >= 200 ? 'CRITICAL' :
+                    status?.latest_data?.aqi >= 101 ? 'HIGH' :
+                      status?.latest_data?.aqi >= 51 ? 'MODERATE' : 'LOW'}
                 </p>
               </div>
               <div className="w-12 h-12 bg-red-500/10 rounded-lg flex items-center justify-center">
