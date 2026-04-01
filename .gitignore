@@ -19,5 +19,5 @@ smart_city_ml/aod_model_*/
 smart_city_ml/aod_worker/
 smart_city_ml/data/
 *.nc4
-__pycache__/
+*__pycache__/
 .venv/
