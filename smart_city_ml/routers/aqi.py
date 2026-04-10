@@ -41,9 +41,9 @@ async def predict_aqi(request: AQIPredictionRequest, registry: ModelRegistry = D
             forecast_points.append(
                 AQIForecastPoint(
                     date=row['ds'].strftime("%Y-%m-%d"),
-                    prediction=round(row['yhat'], 2),
-                    lower_bound=round(row['yhat_lower'], 2),
-                    upper_bound=round(row['yhat_upper'], 2)
+                    prediction=max(0, round(row['yhat'], 2)),
+                    lower_bound=max(0, round(row['yhat_lower'], 2)),
+                    upper_bound=max(0, round(row['yhat_upper'], 2))
                 )
             )
         return AQIPredictionResponse(forecast=forecast_points)

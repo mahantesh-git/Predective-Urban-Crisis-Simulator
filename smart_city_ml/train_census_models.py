@@ -259,7 +259,7 @@ try:
     aqi_model.fit(df_aqi_prophet)
     with open(MODEL_DIR + 'aqi.pkl', 'wb') as f:
         pickle.dump(aqi_model, f)
-    print("  ✅ aqi.pkl — Prophet (AQI, census-season aware)")
+    print("  [Done] aqi.pkl - Prophet (AQI, census-season aware)")
 
     # Water Prophet
     df_water_prophet = df_train[['date', 'water_quality']].rename(columns={'date': 'ds', 'water_quality': 'y'})
@@ -268,10 +268,10 @@ try:
     water_model.fit(df_water_prophet)
     with open(MODEL_DIR + 'water.pkl', 'wb') as f:
         pickle.dump(water_model, f)
-    print("  ✅ water.pkl — Prophet (water quality, census-derived)")
+    print("  [Done] water.pkl - Prophet (water quality, census-derived)")
 
 except ImportError:
-    print("  ⚠️  prophet not installed — skipping Prophet models (run: pip install prophet)")
+    print("  [Warning] prophet not installed")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # STEP 5: Train XGBoost models with full census features
@@ -307,7 +307,7 @@ try:
     )
     health_model.fit(X_health, y_health)
     joblib.dump(health_model, MODEL_DIR + 'health.pkl')
-    print(f"  ✅ health.pkl — XGBoost classifier ({len(HEALTH_FEATURES)} census features)")
+    print(f"  [Done] health.pkl - XGBoost classifier ({len(HEALTH_FEATURES)} census features)")
 
     # Traffic status model (3 classes)
     df_traffic = df_train.dropna(subset=TRAFFIC_FEATURES)
@@ -319,7 +319,7 @@ try:
     )
     traffic_model.fit(X_traffic, y_traffic)
     joblib.dump(traffic_model, MODEL_DIR + 'traffic.pkl')
-    print(f"  ✅ traffic.pkl — XGBoost classifier ({len(TRAFFIC_FEATURES)} features)")
+    print(f"  [Done] traffic.pkl - XGBoost classifier ({len(TRAFFIC_FEATURES)} features)")
 
     # Forest cover regressor
     df_forest = df_train.dropna(subset=FOREST_FEATURES).copy()
@@ -328,10 +328,10 @@ try:
     forest_model = XGBRegressor(n_estimators=100, random_state=42)
     forest_model.fit(df_forest_shifted, y_forest)
     joblib.dump(forest_model, MODEL_DIR + 'forest.pkl')
-    print(f"  ✅ forest.pkl — XGBoost regressor ({len(FOREST_FEATURES)} features)")
+    print(f"  [Done] forest.pkl - XGBoost regressor ({len(FOREST_FEATURES)} features)")
 
 except ImportError:
-    print("  ⚠️  xgboost not installed — install with: pip install xgboost")
+    print("  [Warning] xgboost not installed")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # STEP 6: Summary report
@@ -340,13 +340,13 @@ except ImportError:
 print("\n[6/6] Training complete! Feature importance summary:")
 print(f"\n  Training data: {len(df_train):,} rows, {df_train['city_id'].nunique()} cities")
 print(f"  Census features added:")
-print(f"    - population_density (people/km²)  → urban pressure on health/traffic")
-print(f"    - household_density  (HH/km²)       → overcrowding risk")
-print(f"    - literacy_rate                      → community resilience proxy")
-print(f"    - avg_rainfall + monsoon             → seasonal water quality + AQI")
-print(f"    - max_temp / min_temp               → heat stress baseline")
-print(f"    - hospital_beds_per_1000            → healthcare capacity")
-print(f"    - workforce_ratio                   → urban density / economic activity")
+print(f"    - population_density (people/km2)  -> urban pressure on health/traffic")
+print(f"    - household_density  (HH/km2)      -> overcrowding risk")
+print(f"    - literacy_rate                    -> community resilience proxy")
+print(f"    - avg_rainfall + monsoon           -> seasonal water quality + AQI")
+print(f"    - max_temp / min_temp              -> heat stress baseline")
+print(f"    - hospital_beds_per_1000           -> healthcare capacity")
+print(f"    - workforce_ratio                  -> urban density / economic activity")
 print(f"\n  Models saved to: {os.path.abspath(MODEL_DIR)}")
-print("\n  ✅ All models trained with real census-augmented data!")
+print("\n  [Done] All models trained with real census-augmented data!")
 print("=" * 60)

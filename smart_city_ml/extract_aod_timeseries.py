@@ -7,11 +7,14 @@ from datetime import datetime
 import shutil
 from pyproj import Proj
 
+import glob
+
 # Constants
-NEWDATA_DIR = r"d:\ballary_hackathon\PUECS\datasets\newdata"
-LATLON_CSV = r"d:\ballary_hackathon\PUECS\datasets\long_lat.csv"
-OUTPUT_CSV = r"d:\ballary_hackathon\PUECS\datasets\historical_pollution.csv"
-TMP_DIR = r"d:\ballary_hackathon\PUECS\smart_city_ml\aod_worker"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+NEWDATA_DIR = os.path.join(BASE_DIR, "datasets", "newdata")
+LATLON_CSV = os.path.join(BASE_DIR, "datasets", "long_lat.csv")
+OUTPUT_CSV = os.path.join(BASE_DIR, "datasets", "historical_pollution.csv")
+TMP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "aod_worker")
 
 # India LCC Projection
 proj_str = "+proj=lcc +lat_1=12.472944444 +lat_2=35.172805555 +lat_0=24.0 +lon_0=80.0 +x_0=4000000 +y_0=4000000 +datum=WGS84 +units=m"
@@ -107,7 +110,8 @@ if not os.path.exists(TMP_DIR):
 
 final_all_data = []
 # Process the full 15-year historical span
-benchmark_years = [2005, 2010, 2015, 2019]
+zip_files = glob.glob(os.path.join(NEWDATA_DIR, "aod_model_*.zip"))
+benchmark_years = sorted([int(os.path.basename(f).split('_')[2].split('.')[0]) for f in zip_files])
 
 for year in benchmark_years:
     year_data = extract_year_data(year)
