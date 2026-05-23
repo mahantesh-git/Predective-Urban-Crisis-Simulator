@@ -7,40 +7,16 @@ const { generateForecast } = require('../engine/forecastEngine');
 /**
  * GET /forecast
  * ─────────────────────────────────────────────────────────────────────────────
- * Returns a 7-day AQI + water stress forecast with confidence bands.
- *
- * In demo mode (ML_ENABLED=false), uses deterministic trend extrapolation.
- * In production mode (ML_ENABLED=true), delegates to the ML microservice.
- *
- * Response:
- * {
- *   success: true,
- *   forecast_days: 7,
- *   based_on_days: number,
- *   mode: "mock" | "ml_service",
- *   aqi_forecast: number[7],
- *   water_stress_forecast: number[7],
- *   confidence_bands: {
- *     aqi:   { lower: number[7], upper: number[7] },
- *     water: { lower: number[7], upper: number[7] }
- *   },
- *   labels: string[7],
- *   crisis_probability?: number,       // ML only
- *   crisis_status?: string,            // ML only
- *   uncertainty?: object,              // ML only
- * }
+ * Returns a N-day AQI + water stress forecast with confidence bands.
  */
 router.get('/', async (req, res, next) => {
     try {
-        // Accept cityId from query param, default to 'bengaluru'
         const cityId = req.query.cityId || 'bengaluru';
 
-        // Allow frontend to request a custom number of days via ?days=N
         const defaultDays = parseInt(process.env.FORECAST_DAYS || '7', 10);
         const requestedDays = parseInt(req.query.days || defaultDays, 10);
-        const forecastDays = Math.min(Math.max(requestedDays, 7), 365); // clamp 7–365
+        const forecastDays = Math.min(Math.max(requestedDays, 1), 365); 
 
-        // Fetch all available historical data for this city sorted oldest → newest
         const historicalData = await EnvironmentalData.find({ cityId }).sort({ date: 1 });
 
         if (!historicalData.length) {
@@ -52,27 +28,22 @@ router.get('/', async (req, res, next) => {
 
         const forecast = await generateForecast(historicalData, forecastDays);
 
-        // Generate human-readable day labels starting from tomorrow
         const today = new Date();
         const labels = Array.from({ length: forecastDays }, (_, i) => {
             const d = new Date(today);
             d.setDate(d.getDate() + i + 1);
-            return `Day ${i + 1} (${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         });
 
         const response = {
             success: true,
-            forecast_days: forecastDays,
-            based_on_days: historicalData.length,
             mode: forecast.mode,
-            note: forecast.note,
             labels,
             aqi_forecast: forecast.aqi_forecast,
             water_stress_forecast: forecast.water_stress_forecast,
             confidence_bands: forecast.confidence_bands,
         };
 
-        // Include ML-specific fields when available
         if (forecast.crisis_probability !== undefined) {
             response.crisis_probability = forecast.crisis_probability;
             response.crisis_status = forecast.crisis_status;
@@ -80,11 +51,9 @@ router.get('/', async (req, res, next) => {
             response.affected_zones = forecast.affected_zones;
             response.recommended_policies = forecast.recommended_policies;
         }
-        if (forecast.uncertainty) {
-            response.uncertainty = forecast.uncertainty;
-        }
-        if (forecast.ml_metadata) {
-            response.ml_metadata = forecast.ml_metadata;
+
+        if (forecast.explainable_ai !== undefined) {
+            response.explainable_ai = forecast.explainable_ai;
         }
 
         res.json(response);
@@ -101,9 +70,8 @@ router.post('/scenario', async (req, res, next) => {
     try {
         const { scenario_traffic_delta = 0, scenario_industry_delta = 0, days_ahead = 7 } = req.body;
 
-        // Fetch recent historical data to seed the ML model
         const history = await EnvironmentalData.find().sort({ date: -1 }).limit(14).lean();
-        history.reverse(); // oldest to newest
+        history.reverse(); 
 
         const history_aqi = history.map(h => h.aqi);
         const history_water = history.map(h => h.water_quality);
@@ -112,7 +80,6 @@ router.post('/scenario', async (req, res, next) => {
             process.env.ML_URL = 'http://localhost:8001';
         }
 
-        // Forward to python microservice
         const fetch = require('node-fetch');
         const mlResponse = await fetch(`${process.env.ML_URL}/forecast/multi-horizon/`, {
             method: 'POST',
@@ -136,8 +103,8 @@ router.post('/scenario', async (req, res, next) => {
             success: true,
             mode: mlData.model_strategy_used,
             labels: mlData.labels,
-            aqi_forecast: mlData.forecasts.aqi,
-            water_stress_forecast: mlData.forecasts.water_stress,
+            aqi_forecast: mlData.forecasts.aqi.map(v => Math.max(0, v + (scenario_traffic_delta * 0.4))),
+            water_stress_forecast: mlData.forecasts.water_stress.map(v => Math.max(0, v + (scenario_industry_delta * 0.2))),
             confidence_bands: mlData.confidence_intervals,
             explainable_ai: mlData.explainable_ai
         });

@@ -47,14 +47,18 @@ router.post('/', dataValidation, async (req, res, next) => {
             traffic,
             water_quality,
             industry_emission,
+            cityId = 'bengaluru', // Default to bengaluru if not provided
             date = new Date(),
             source = 'api',
         } = req.body;
 
-        // Upsert: if a record for this date already exists, update it
+        // Upsert: if a record for this date AND city already exists, update it
         const record = await EnvironmentalData.findOneAndUpdate(
-            { date: new Date(new Date(date).setHours(0, 0, 0, 0)) },
-            { aqi, traffic, water_quality, industry_emission, source },
+            { 
+                date: new Date(new Date(date).setHours(0, 0, 0, 0)),
+                cityId: cityId.toLowerCase()
+            },
+            { aqi, traffic, water_quality, industry_emission, source, cityId: cityId.toLowerCase() },
             { upsert: true, new: true, setDefaultsOnInsert: true }
         );
 
@@ -83,18 +87,12 @@ router.post('/', dataValidation, async (req, res, next) => {
 
         res.status(201).json({
             success: true,
-            message: 'Environmental data recorded successfully.',
-            record_id: record._id,
-            date: record.date,
-            source: record.source,
             risk_update: {
                 risk_score: riskResult.risk_score,
                 crisis_level: getCrisisLevel(riskResult.risk_score),
-                confidence_interval: riskResult.confidence_interval,
                 triggered_systems: riskResult.triggered_systems,
                 cascade_effects: riskResult.cascade_effects,
             },
-            websocket_broadcast: !!wss,
         });
     } catch (err) {
         next(err);
@@ -111,9 +109,12 @@ router.get('/', async (req, res, next) => {
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
+        const cityId = req.query.cityId;
+        const query = cityId ? { cityId: cityId.toLowerCase() } : {};
+
         const [records, total] = await Promise.all([
-            EnvironmentalData.find().sort({ date: -1 }).skip(skip).limit(limit),
-            EnvironmentalData.countDocuments(),
+            EnvironmentalData.find(query).sort({ date: -1 }).skip(skip).limit(limit),
+            EnvironmentalData.countDocuments(query),
         ]);
 
         res.json({

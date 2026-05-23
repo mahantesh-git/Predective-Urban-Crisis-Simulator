@@ -10,26 +10,16 @@ const { normalizeAll } = require('./dataProcessor');
 
 // ─── Direct Dependency Graph Weights (Adjacency Matrix) ────────────────────
 const ADJACENCY_MATRIX = {
-    // Traffic influences AQI heavily
     'TRAFFIC': { 'AQI': 0.45 },
-
-    // Industry influences AQI and Water Quality heavily
     'INDUSTRY': { 'AQI': 0.50, 'WATER': 0.60 },
-
-    // Poor AQI strongly cascades into Health Risks
     'AQI': { 'HEALTH': 0.70 },
-
-    // Poor Water also cascades into Health Risks
     'WATER': { 'HEALTH': 0.40 },
-
-    // Environmental Heatwave aggravates AQI and Health
     'HEATWAVE': { 'AQI': 0.30, 'HEALTH': 0.50 },
-
-    'HEALTH': {} // Terminal sink node primarily
+    'HEALTH': {} 
 };
 
-const DAMPING_FACTOR = 0.8; // Gamma
-const ITERATIONS = 3;       // Simulation steps
+const DAMPING_FACTOR = 0.8;
+const ITERATIONS = 3;
 const CRISIS_THRESHOLD = 0.60;
 
 /**
@@ -50,7 +40,7 @@ const runCascade = (normalized, heatwaveLevel = 0) => {
         'TRAFFIC': traffic,
         'INDUSTRY': emissions,
         'HEATWAVE': heatwaveNorm,
-        'HEALTH': 0 // Health risk emerges purely from cascade initially
+        'HEALTH': 0
     };
 
     let current_risks = { ...base_risks };
@@ -109,9 +99,7 @@ const runCascade = (normalized, heatwaveLevel = 0) => {
     if (traffic_risk >= CRISIS_THRESHOLD) triggered_systems.push('TRAFFIC_NETWORK');
 
     // ── Layer 5: Time-to-Impact estimate ───────────────────────────────────────
-    const time_to_impact = risk_score > 0
-        ? Math.max(Math.round((CRISIS_THRESHOLD - risk_score) / 0.05), 0)
-        : null;
+    const time_to_impact = risk_score > 0 ? Math.max(Math.round((CRISIS_THRESHOLD - risk_score) / 0.05), 0): null;
 
     return {
         risk_score: parseFloat(risk_score.toFixed(4)),

@@ -23,7 +23,7 @@ const initWebSocket = (httpServer, app) => {
     const wss = new WebSocketServer({ server: httpServer });
 
     wss.on('connection', (ws, req) => {
-        console.log(`📡 WebSocket client connected from ${req.socket.remoteAddress}`);
+        console.log(`WebSocket client connected from ${req.socket.remoteAddress}`);
 
         // Send current connection status immediately
         ws.send(JSON.stringify({
@@ -37,16 +37,16 @@ const initWebSocket = (httpServer, app) => {
             try {
                 const msg = JSON.parse(raw);
                 if (msg.type === 'PONG') return; // keepalive response
-                console.log('📨 WS message received:', msg);
+                console.log('WS message received:', msg);
             } catch (_) { /* ignore malformed messages */ }
         });
 
         ws.on('close', () => {
-            console.log('📡 WebSocket client disconnected.');
+            console.log('WebSocket client disconnected.');
         });
 
         ws.on('error', (err) => {
-            console.error('📡 WebSocket error:', err.message);
+            console.error('WebSocket error:', err.message);
         });
     });
 
@@ -64,7 +64,7 @@ const initWebSocket = (httpServer, app) => {
     // Attach wss to Express app so routes can access it
     app.set('wss', wss);
 
-    console.log('📡 WebSocket server initialized on same port.');
+    console.log('WebSocket server initialized on same port.');
     return wss;
 };
 

@@ -6,7 +6,6 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { TrendingUp, TrendingDown, Clock, History as HistoryIcon } from 'lucide-react';
 import { PageTransition } from '../components/PageTransition';
 import { PageHeader } from '../components/PageHeader';
-import { CrisisReplaySlider } from '../components/timeline/CrisisReplaySlider';
 import { useCity } from '../context/CityContext';
 
 interface HistoryData {
@@ -129,8 +128,7 @@ export function History() {
           </Card>
         </div>
 
-        {/* Timeline Replay Component */}
-        <CrisisReplaySlider data={history} />
+        
 
         {/* Multi-series Area Chart */}
         <Card className="bg-card border-border p-6 shadow-sm">
@@ -165,6 +163,7 @@ export function History() {
                   borderRadius: '8px',
                   color: 'var(--card-foreground)',
                 }}
+                formatter={(value: number) => [value.toFixed(1), '']}
               />
               <Legend
                 wrapperStyle={{
@@ -229,7 +228,7 @@ export function History() {
                         style={{ width: `${((history?.aqi_trend?.[index] ?? 0) / 300) * 100}%` }}
                       ></div>
                     </div>
-                    <span className="text-card-foreground font-bold w-12 text-right">{history?.aqi_trend?.[index] ?? 0}</span>
+                    <span className="text-card-foreground font-bold w-12 text-right">{(history?.aqi_trend?.[index] ?? 0).toFixed(1)}</span>
                   </div>
                 </div>
               ))}
@@ -302,7 +301,7 @@ export function History() {
                         style={{ width: `${((history?.industry_trend?.[index] ?? 0) / 300) * 100}%` }}
                       ></div>
                     </div>
-                    <span className="text-card-foreground font-bold w-12 text-right">{history?.industry_trend?.[index] ?? 0}</span>
+                    <span className="text-card-foreground font-bold w-12 text-right">{(history?.industry_trend?.[index] ?? 0).toFixed(1)}</span>
                   </div>
                 </div>
               ))}

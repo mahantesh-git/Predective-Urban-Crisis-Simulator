@@ -35,19 +35,45 @@ const { computeRisk } = require('../engine/cascadeEngine');
  */
 router.get('/', async (req, res, next) => {
     try {
-        const limit = parseInt(req.query.days) || 7;
+        const limit = parseInt(req.query.days) || 7 ;
         const heatwaveLevel = parseFloat(req.query.heatwaveLevel) || 0;
         const cityId = req.query.cityId;
 
-        // Fetch historical data oldest → newest for specific city if provided
+        // Fallback: if no data for this city, use bengaluru as baseline
         let query = {};
-        if (cityId) {
-            query.cityId = cityId;
+        if (cityId) query.cityId = cityId;
+
+        // Use aggregation to group by day and get the latest reading per day
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const pipeline = [
+            { $match: query },
+            {
+                $group: {
+                    _id: {
+                        cityId: "$cityId",
+                        year: { $year: "$date" },
+                        month: { $month: "$date" },
+                        day: { $dayOfMonth: "$date" }
+                    },
+                    latestRecord: { $last: "$$ROOT" },
+                    date: { $first: "$date" }
+                }
+            },
+            { $sort: { "_id.year": -1, "_id.month": -1, "_id.day": -1 } },
+            { $limit: limit },
+            { $replaceRoot: { newRoot: "$latestRecord" } }
+        ];
+
+        let records = await EnvironmentalData.aggregate(pipeline);
+
+        if (!records.length && cityId && cityId !== 'bengaluru') {
+            pipeline[0].$match = { cityId: 'bengaluru' };
+            records = await EnvironmentalData.aggregate(pipeline);
         }
 
-        const records = await EnvironmentalData.find(query)
-            .sort({ date: 1 })
-            .limit(limit);
+        records.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         if (!records.length) {
             return res.status(404).json({
@@ -70,8 +96,6 @@ router.get('/', async (req, res, next) => {
         const water_quality = [];
         const industry_emission = [];
         const risk_scores = [];
-        const crisis_levels = [];
-        const cascade_per_day = [];
 
         for (const rec of records) {
             const dateStr = new Date(rec.date).toLocaleDateString('en-US', {
@@ -80,22 +104,14 @@ router.get('/', async (req, res, next) => {
             const riskResult = computeRisk(rec, heatwaveLevel);
 
             labels.push(dateStr);
-            aqi.push(rec.aqi);
-            traffic.push(rec.traffic);
-            water_quality.push(rec.water_quality);
-            industry_emission.push(rec.industry_emission);
-            risk_scores.push(riskResult.risk_score);
-            crisis_levels.push(getCrisisLevel(riskResult.risk_score));
-            cascade_per_day.push({
-                date: dateStr,
-                ...riskResult.cascade_effects,
-                risk: riskResult.risk_score,
-            });
+            aqi.push(Math.max(0, rec.aqi));
+            traffic.push(Math.max(0, rec.traffic));
+            water_quality.push(Math.max(0, rec.water_quality));
+            industry_emission.push(Math.max(0, rec.industry_emission));
+            risk_scores.push(Math.max(0, riskResult.risk_score));
         }
 
-        // ── Summary stats ──────────────────────────────────────────────────────────
-        const avgRisk = risk_scores.reduce((a, b) => a + b, 0) / risk_scores.length;
-        const peakIdx = risk_scores.indexOf(Math.max(...risk_scores));
+        // ── Trend direction ────────────────────────────────────────────────────────
         const firstRisk = risk_scores[0];
         const lastRisk = risk_scores[risk_scores.length - 1];
         const delta = lastRisk - firstRisk;
@@ -106,9 +122,7 @@ router.get('/', async (req, res, next) => {
 
         res.json({
             success: true,
-            days: records.length,
             trend_direction: trendDirection,
-            risk_delta: parseFloat(delta.toFixed(4)),
             chart_data: {
                 labels,
                 aqi,
@@ -116,13 +130,8 @@ router.get('/', async (req, res, next) => {
                 water_quality,
                 industry_emission,
                 risk_scores,
-                crisis_levels,
-                cascade_per_day,
             },
             summary: {
-                peak_risk_day: labels[peakIdx],
-                peak_risk_score: risk_scores[peakIdx],
-                avg_risk: parseFloat(avgRisk.toFixed(4)),
                 avg_aqi: parseFloat((aqi.reduce((a, b) => a + b, 0) / aqi.length).toFixed(1)),
                 avg_water_quality: parseFloat((water_quality.reduce((a, b) => a + b, 0) / water_quality.length).toFixed(1)),
             },

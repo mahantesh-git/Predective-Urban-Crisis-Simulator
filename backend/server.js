@@ -4,8 +4,6 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const helmet = require('helmet');
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./config/swagger');
 
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
@@ -20,7 +18,6 @@ const recommendationsRoute = require('./routes/recommendations');
 const zonesRoute = require('./routes/zones');
 const dataRoute = require('./routes/data');
 const historyRoute = require('./routes/history');
-const deforestationRoute = require('./routes/deforestation');
 
 // ── Connect to MongoDB ────────────────────────────────────────────────────────
 connectDB();
@@ -29,9 +26,7 @@ connectDB();
 const app = express();
 
 // ── Security Middleware ───────────────────────────────────────────────────────
-app.use(helmet({
-    contentSecurityPolicy: false, // allow Swagger UI to load
-}));
+app.use(helmet());
 app.use(cors());
 app.use(globalLimiter);         // 200 req/15min per IP across all routes
 
@@ -47,14 +42,6 @@ app.get('/ping', (req, res) => res.json({
     ml_mode: process.env.ML_ENABLED === 'true' ? 'ml_service' : 'mock',
 }));
 
-// ── Swagger Docs ──────────────────────────────────────────────────────────────
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-    customSiteTitle: 'CitySentinel AI – API Docs',
-    customCss: '.swagger-ui .topbar { background-color: #1a1a2e; }',
-}));
-// Raw OpenAPI JSON
-app.get('/docs.json', (req, res) => res.json(swaggerSpec));
-
 // ── API Routes ────────────────────────────────────────────────────────────────
 /**
  * GET  /status               → Current crisis metrics
@@ -68,7 +55,6 @@ app.get('/docs.json', (req, res) => res.json(swaggerSpec));
  * POST /data                 → Real-time environmental data ingestion (NEW)
  * GET  /data                 → Paginated data records (NEW)
  * GET  /history              → 7-day trend data for charts (NEW)
- * GET  /docs                 → Swagger interactive API docs (NEW)
  */
 app.use('/status', statusRoute);
 app.use('/simulate', simulationLimiter, simulateRoute);  // compute-heavy → stricter limit
@@ -77,7 +63,6 @@ app.use('/recommendations', recommendationsRoute);
 app.use('/zones', zonesRoute);
 app.use('/data', dataIngestLimiter, dataRoute);      // ingest → dedicated limit
 app.use('/history', historyRoute);
-app.use('/deforestation', deforestationRoute);
 
 // ── 404 Handler ───────────────────────────────────────────────────────────────
 app.use((req, res) => {
@@ -86,7 +71,6 @@ app.use((req, res) => {
         error: `Route not found: ${req.method} ${req.originalUrl}`,
         available_routes: [
             'GET  /ping',
-            'GET  /docs                  ← Interactive API docs',
             'GET  /status',
             'POST /simulate',
             'POST /simulate/compare',
@@ -98,10 +82,6 @@ app.use((req, res) => {
             'POST /data',
             'GET  /data',
             'GET  /history',
-            'GET  /deforestation/overview',
-            'GET  /deforestation/risk',
-            'GET  /deforestation/national',
-            'GET  /deforestation/drought',
         ],
     });
 });
@@ -116,12 +96,17 @@ const server = http.createServer(app);
 // Upgrade HTTP server to support WebSocket on the same port
 initWebSocket(server, app);
 
+// ── Sensor Simulator (Auto-generate live data) ────────────────────────────────
+const { startSimulator } = require('./services/sensorSimulator');
+// Run every 2 minutes for a lively dashboard, can be adjusted via env
+const SIM_INTERVAL = parseInt(process.env.SIMULATOR_INTERVAL_MS || '120000', 10);
+startSimulator(app, SIM_INTERVAL);
+
 server.listen(PORT, () => {
-    console.log(`\n🚀 CitySentinel AI Engine  →  http://localhost:${PORT}`);
-    console.log(`📖 Swagger Docs            →  http://localhost:${PORT}/docs`);
-    console.log(`📡 WebSocket Feed          →  ws://localhost:${PORT}`);
-    console.log(`🔮 ML Mode: ${process.env.ML_ENABLED === 'true' ? '🤖 ML Service' : '🔮 Mock Forecast'}`);
-    console.log(`\n   Endpoints:`);
+    console.log(`\n CitySentinel AI Engine  →  http://localhost:${PORT}`);
+    console.log(` WebSocket Feed          →  ws://localhost:${PORT}`);
+    console.log(`ML Mode: ${process.env.ML_ENABLED === 'true' ? ' ML Service' : 'Mock Forecast'}`);
+    console.log(`\n Endpoints:`);
     console.log(`   GET  /status`);
     console.log(`   POST /simulate          (rate: 30/15min)`);
     console.log(`   POST /simulate/compare`);
@@ -129,9 +114,7 @@ server.listen(PORT, () => {
     console.log(`   GET  /recommendations`);
     console.log(`   GET  /zones`);
     console.log(`   POST /data              (rate: 60/15min)`);
-    console.log(`   GET  /history`);
-    console.log(`   GET  /deforestation/*    (overview, risk, national, drought)`);
-    console.log(`   GET  /docs\n`);
+    console.log(`   GET  /history\n`);
 });
 
 module.exports = app;

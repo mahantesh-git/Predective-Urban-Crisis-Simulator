@@ -11,7 +11,6 @@ class ModelRegistry:
         self.aqi_model = None
         self.water_model = None
         self.health_model = None
-        self.forest_model = None
         self.traffic_model = None
 
 registry = ModelRegistry()
@@ -32,7 +31,6 @@ def load_models(models_dir: str = "models"):
         "aqi_model": "aqi.pkl",
         "water_model": "water.pkl",
         "health_model": "health.pkl",
-        "forest_model": "forest.pkl",
         "traffic_model": "traffic.pkl"
     }
 
@@ -41,7 +39,7 @@ def load_models(models_dir: str = "models"):
         filepath = os.path.join(resolved_models_dir, filename)
         if os.path.exists(filepath):
             try:
-                # Use pickle for Prophet models, joblib for others
+                # Prophet models use pickle; XGBoost/sklearn models use joblib
                 if filename in ["aqi.pkl", "water.pkl"]:
                     with open(filepath, 'rb') as f:
                         model = pickle.load(f)

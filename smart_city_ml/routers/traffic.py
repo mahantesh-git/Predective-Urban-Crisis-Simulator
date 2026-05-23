@@ -22,17 +22,18 @@ async def predict_traffic(request: TrafficPredictionRequest, registry: ModelRegi
         return TrafficPredictionResponse(traffic_status=status)
 
     try:
-        # Prepare input features matching the classifier's expected format (8 features)
-        # Features: ['time_of_day', 'day_of_week', 'traffic_density', 'temperature', 'population_density', 'household_density', 'month', 'summer']
+        # The traffic model was trained on exactly 5 features:
+        # ['time_of_day', 'day_of_week', 'traffic_density', 'aqi', 'temperature']
+        # Derive aqi and temperature from traffic context (population & density proxy).
+        aqi_proxy  = min(500, request.traffic_density * 0.8)  # denser traffic → higher AQI
+        temp_proxy = request.temperature
+
         features = pd.DataFrame([{
-            "time_of_day": request.time_of_day,
-            "day_of_week": request.day_of_week,
+            "time_of_day":     request.time_of_day,
+            "day_of_week":     request.day_of_week,
             "traffic_density": request.traffic_density,
-            "temperature": request.temperature,
-            "population_density": request.population_density,
-            "household_density": request.household_density,
-            "month": request.month,
-            "summer": request.summer
+            "aqi":             aqi_proxy,
+            "temperature":     temp_proxy,
         }])
         
         prediction = int(model.predict(features)[0])

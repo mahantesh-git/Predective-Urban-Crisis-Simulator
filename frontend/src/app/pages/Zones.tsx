@@ -188,10 +188,7 @@ export function Zones() {
                       <Card className="bg-slate-900/50 border-slate-800 p-8 shadow-2xl rounded-2xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl" />
                         <div className="grid grid-cols-2 gap-8 relative z-10">
-                          <div>
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Zone ID</p>
-                            <p className="text-lg font-bold text-white mt-1">{zone.id}</p>
-                          </div>
+                          
                           <div>
                             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Current Risk</p>
                             <p className="text-2xl font-black text-white mt-1 drop-shadow-md">{(zone.risk_score * 100).toFixed(0)}%</p>

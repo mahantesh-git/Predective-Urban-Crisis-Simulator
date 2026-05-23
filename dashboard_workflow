@@ -1,0 +1,745 @@
+# PUECS — Dashboard Deep Walkthrough
+
+> **File:** [Dashboard.tsx](file:///e:/P%20projects/PUECS/PUECS/frontend/src/app/pages/Dashboard.tsx)
+> 
+> A complete explanation of every panel on the dashboard — where each number comes from, which function is called, which formula produces it, and whether ML is involved.
+
+---
+
+## Table of Contents
+1. [What the Dashboard Shows](#1-what-the-dashboard-shows)
+2. [How the Dashboard Loads Data on Startup](#2-how-the-dashboard-loads-data-on-startup)
+3. [Panel 1 — Overall Risk Score](#3-panel-1--overall-risk-score)
+4. [Panel 2 — The Four Cascade Cards](#4-panel-2--the-four-cascade-cards)
+5. [Panel 3 — Triggered Alert Systems](#5-panel-3--triggered-alert-systems)
+6. [Panel 4 — Latest Sensor Readings](#6-panel-4--latest-sensor-readings)
+7. [Panel 5 — 7-Day Urban Crisis Trend Chart](#7-panel-5--7-day-urban-crisis-trend-chart)
+8. [Real-Time WebSocket Updates](#8-real-time-websocket-updates)
+9. [City Multiplier — Why Values Differ Per City](#9-city-multiplier--why-values-differ-per-city)
+10. [Does the Dashboard Use ML?](#10-does-the-dashboard-use-ml)
+11. [Full Function Call Chain](#11-full-function-call-chain)
+12. [All Formulas Used in the Dashboard](#12-all-formulas-used-in-the-dashboard)
+
+---
+
+## 1. What the Dashboard Shows
+
+The `/app` route renders `Dashboard.tsx`. It has **5 visual sections**:
+
+```
+┌──────────────────────────────────────────────────────┐
+│  HEADER: "Bengaluru City Overview"     [HIGH] badge  │
+├──────────────────────────────────────────────────────┤
+│  PANEL 1: Overall Risk Score  ████████░░  78%        │
+├──────────┬──────────┬──────────┬───────────────────┤
+│  AQI     │  Water   │  Health  │  Traffic          │  ← PANEL 2
+│  178     │  28%     │  56%     │  45%              │
+├──────────┴──────────┴──────────┴───────────────────┤
+│  PANEL 3: Triggered Alerts   [AIR QUALITY] [WATER]  │
+├─────────────────────────┬────────────────────────────┤
+│  PANEL 4: Sensor Data   │  Latest: AQI 178 / 65%..  │
+├─────────────────────────┴────────────────────────────┤
+│  PANEL 5: 7-Day Chart (AQI, Risk%, Water, Traffic)  │
+└──────────────────────────────────────────────────────┘
+```
+
+---
+
+## 2. How the Dashboard Loads Data on Startup
+
+When the user opens `/app`, `Dashboard.tsx` runs inside a `useEffect` that calls **two functions in parallel**, then opens a **WebSocket**:
+
+```typescript
+useEffect(() => {
+    loadStatus();    // ← Panel 1, 2, 3, 4
+    loadHistory();   // ← Panel 5 (chart)
+
+    // WebSocket for real-time updates
+    ws = new WebSocket(WS_URL);
+
+    // Polling fallback every 30 seconds
+    const interval = setInterval(loadStatus, 30000);
+}, [city.id]);
+```
+
+> **Every time the selected city changes**, `city.id` changes, and the entire `useEffect` re-runs — fetching fresh data for the new city.
+
+---
+
+### `loadStatus()` — the main data loader
+
+**Step 1 — Frontend calls `api.ts::getStatus(city.id)`**
+
+```typescript
+// api.ts
+export const getStatus = async (cityId?: string) => {
+    const response = await api.get('/status', { params: { cityId } });
+    ...
+}
+```
+
+**Step 2 — Node.js `GET /status` route runs**
+
+```
+routes/status.js
+  │
+  ├─ EnvironmentalData.findOne({ cityId }).sort({ date: -1 })
+  │     → fetches the single MOST RECENT record from MongoDB
+  │
+  ├─ computeRisk(latest, heatwaveLevel)
+  │     → engine/cascadeEngine.js (see Panel 1 section)
+  │
+  └─ returns JSON:
+       {
+         success: true,
+         latest_data: { aqi, traffic, water_quality, industry_emission },
+         risk_score: 0.42,
+         cascade_effects: { aqi_risk, water_risk, health_risk, traffic_risk },
+         triggered_systems: [ 'AIR_QUALITY', ... ],
+         crisis_level: 'MODERATE'
+       }
+```
+
+**Step 3 — `api.ts` transforms the backend response**
+
+The backend uses different field names and scales than the frontend needs. `api.ts::getStatus()` converts them:
+
+| Backend field | Frontend field | Transformation |
+|--------------|----------------|----------------|
+| `cascade_effects.aqi_risk` (0–1) | `aqi_impact` (AQI units) | `aqi_risk × latest_data.aqi` |
+| `latest_data.traffic` (0–100) | `traffic_index` (0–1) | `traffic / 100` |
+| `latest_data.water_quality` (0–100) | `water_quality` (0–1) | `water_quality / 100` |
+| `latest_data.industry_emission` (0–100 index) | `industrial_emissions` (kg/h approx) | `industry_emission × 3` |
+
+**Step 4 — `Dashboard.tsx` applies the city multiplier**
+
+After `getStatus()` returns, `loadStatus()` applies `city.riskMultiplier` to scale all values for the selected city (explained in Section 9).
+
+**Step 5 — React state is set**
+
+```typescript
+setStatus(scaledData);  // triggers re-render of all 4 panels
+```
+
+---
+
+### `loadHistory()` — chart data loader
+
+```typescript
+const data = await getHistoryRaw(city.id);
+// calls GET /history?cityId=bengaluru
+```
+
+Returns the last 7 days. For each day, maps to a chart point:
+```typescript
+{
+    label: "May 21",       // date string
+    aqi: 178,              // raw AQI
+    risk_pct: 42.0,        // risk_score × multiplier × 100
+    water_quality: 72.0,   // raw 0–100
+    traffic: 65.0          // raw 0–100
+}
+```
+
+---
+
+## 3. Panel 1 — Overall Risk Score
+
+```
+Overall Risk Score                           42%
+████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░  [progress bar]
+```
+
+### Where does `42%` come from?
+
+It is `status.risk_score × 100`, displayed as a percentage.
+
+`risk_score` is computed by **`cascadeEngine.js::runCascade()`**, which runs a **3-step pipeline**:
+
+---
+
+#### Step A — Normalize raw data to 0–1 risk scale
+
+**File:** [dataProcessor.js](file:///e:/P%20projects/PUECS/PUECS/backend/engine/dataProcessor.js)
+
+```
+normalizeAQI(178)             =  178 / 500            = 0.356
+normalizeTraffic(65)          =  65 / 100             = 0.650
+normalizeWater(72)            =  (100 - 72) / 100     = 0.280   ← INVERTED
+normalizeEmissions(35)        =  35 / 100             = 0.350
+```
+
+> **Why invert water?** Water quality 100 = pure water = zero risk. Water quality 0 = contaminated = maximum risk. So risk = `1 - quality/100`.
+
+---
+
+#### Step B — Cascade propagation (Markov-style, 3 iterations)
+
+The system uses a **directed graph** where each node is a risk type:
+
+```
+TRAFFIC ──(0.45)──► AQI
+INDUSTRY ─(0.50)──► AQI
+INDUSTRY ─(0.60)──► WATER
+AQI ──────(0.70)──► HEALTH
+WATER ─────(0.40)──► HEALTH
+HEATWAVE ─(0.30)──► AQI
+HEATWAVE ─(0.50)──► HEALTH
+HEALTH   ──────── (terminal — does not cause others)
+```
+
+**Each iteration applies this formula:**
+
+```
+Risk_next[target] = BaseRisk[target] + 0.8 × Σ(Risk_current[src] × Weight[src→target])
+```
+
+**γ = 0.8** is the damping factor — stops risks from amplifying infinitely.
+
+**Example — AQI node, Iteration 1:**
+```
+cascade_sum = (traffic_norm × 0.45) + (emissions_norm × 0.50)
+            = (0.65 × 0.45) + (0.35 × 0.50)
+            = 0.2925 + 0.175
+            = 0.4675
+
+AQI_risk = BaseAQI(0.356) + (0.8 × 0.4675)
+         = 0.356 + 0.374
+         = 0.730   (clamped to max 1.0)
+```
+
+**Example — HEALTH node, Iteration 1:**
+```
+cascade_sum = (AQI_risk × 0.70) + (water_risk × 0.40)
+            = (0.730 × 0.70) + (0.280 × 0.40)
+            = 0.511 + 0.112
+            = 0.623
+
+HEALTH_risk = 0 + (0.8 × 0.623) = 0.498
+```
+
+This runs **3 times** — each iteration the cascade effects compound.
+
+---
+
+#### Step C — Composite risk score
+
+After 3 iterations, the final risk score is:
+
+```
+risk_score = (0.40 × aqi_risk)
+           + (0.25 × water_risk)
+           + (0.20 × health_risk)
+           + (0.15 × traffic_risk)
+```
+
+**Why these weights?**
+- **AQI (40%)** — most directly measurable and most impactful on human health
+- **Water (25%)** — second biggest public health threat
+- **Health (20%)** — downstream indicator; already influenced by AQI + water
+- **Traffic (15%)** — indirect cause of pollution, not a direct harm
+
+---
+
+#### Step D — City multiplier scaling
+
+In `Dashboard.tsx::loadStatus()`:
+
+```typescript
+const scaledRisk = Math.min(rawRisk * city.riskMultiplier, 1);
+```
+
+If `city.riskMultiplier = 1.3` (e.g. Delhi, which is historically more polluted), a raw score of `0.42` becomes `0.55`.
+
+---
+
+#### Step E — Crisis level label
+
+```typescript
+if (scaledRisk >= 0.8) → 'CRITICAL'
+if (scaledRisk >= 0.6) → 'HIGH'
+if (scaledRisk >= 0.4) → 'MODERATE'
+else                   → 'LOW'
+```
+
+This label appears as the **colored badge** in the dashboard header.
+
+> **❌ Does NOT use ML.** Pure formula-based computation.
+
+---
+
+## 4. Panel 2 — The Four Cascade Cards
+
+```
+┌──────────┬──────────┬──────────┬──────────┐
+│ Air      │ Water    │ Health   │ Traffic  │
+│ Quality  │ Stress   │ Risk     │ Status   │
+│  178     │  28%     │  56%     │  45%     │
+│  HIGH    │  LOW     │  MODERATE│  LOW     │
+└──────────┴──────────┴──────────┴──────────┘
+```
+
+Each card shows a value and a severity label. Here's where each value comes from:
+
+---
+
+### Card 1 — Air Quality (AQI)
+
+**Displayed value:** `status.latest_data.aqi`
+
+**Chain:**
+```
+MongoDB.aqi (raw, e.g. 178)
+  → api.ts: Math.round(city.baseAqi + (raw_aqi - 98) * multiplier)
+  → Dashboard: displayed directly as-is
+```
+
+**Severity label (computed in JSX):**
+```typescript
+aqi >= 200 → 'CRITICAL'  (red)
+aqi >= 101 → 'HIGH'      (orange)
+aqi >= 51  → 'MODERATE'  (yellow)
+else       → 'LOW'       (green)
+```
+
+> This is the **WHO/CPCB AQI breakpoint scale** — same used by real Indian air quality monitoring.
+
+> **❌ No ML.** Direct sensor reading from MongoDB.
+
+---
+
+### Card 2 — Water Stress
+
+**Displayed value:** `status.cascade_effects.water_stress × 100` → shown as `%`
+
+**Chain:**
+```
+MongoDB.water_quality = 72
+  normalizeWater(72) = (100 - 72) / 100 = 0.28
+  → cascade engine propagates this through INDUSTRY→WATER, WATER→HEALTH
+  → final water_risk after 3 iterations (e.g. 0.28)
+  → api.ts: water_stress = cascade_effects.water_risk × multiplier
+  → Dashboard: 0.28 × 100 = "28%"
+```
+
+**Severity label:**
+```typescript
+getLevel(water_stress):
+  >= 0.8 → 'CRITICAL'
+  >= 0.6 → 'HIGH'
+  >= 0.4 → 'MODERATE'
+  else   → 'LOW'
+```
+
+> **❌ No ML.** Cascade engine formula only.
+
+---
+
+### Card 3 — Health Risk
+
+**Displayed value:** `status.cascade_effects.health_risk × 100` → shown as `%`
+
+**Chain:**
+```
+Health risk STARTS at 0 in the cascade graph.
+It emerges ENTIRELY from cascade effects:
+
+HEALTH is the terminal sink node:
+  ← AQI  feeds into it with weight 0.70
+  ← WATER feeds into it with weight 0.40
+  ← HEATWAVE feeds with weight 0.50
+
+After 3 cascade iterations, health_risk represents
+how much the AQI + water contamination threatens public health.
+```
+
+**Example:**
+```
+After iteration 1: health_risk = 0.8 × (0.730×0.70 + 0.280×0.40) = 0.499
+After iteration 2: compounds further
+After iteration 3: final value → e.g. 0.56 → displayed as "56%"
+```
+
+> **❌ No ML.** Pure cascade propagation.  
+> Note: The Python `health.pkl` XGBoost model is only used in the **Forecast** page, not here.
+
+---
+
+### Card 4 — Traffic Status
+
+**Displayed value:** `status.cascade_effects.traffic_disruption × 100` → shown as `%`
+
+**Chain:**
+```
+MongoDB.traffic = 65 (% congestion)
+  normalizeTraffic(65) = 65 / 100 = 0.650
+  → cascade engine: TRAFFIC propagates INTO AQI (weight 0.45)
+    but TRAFFIC itself is a source node — its own risk stays at 0.65
+  → api.ts: traffic_disruption = cascade_effects.traffic_risk × multiplier
+  → Dashboard: 0.65 × 100 = "65%"
+```
+
+> **❌ No ML.** Raw normalized sensor value.
+
+---
+
+## 5. Panel 3 — Triggered Alert Systems
+
+```
+⚠ Triggered Alert Systems
+[AIR QUALITY]  [WATER SUPPLY]
+```
+
+Or when nothing is triggered:
+```
+✓ All systems nominal. No active alerts.
+```
+
+### How are triggered systems determined?
+
+**On the backend** (`cascadeEngine.js`):
+```javascript
+const CRISIS_THRESHOLD = 0.60;
+
+if (aqi_risk   >= 0.60) → 'AIR_QUALITY'
+if (water_risk >= 0.60) → 'WATER_SUPPLY'
+if (health_risk>= 0.60) → 'PUBLIC_HEALTH'
+if (traffic_risk>=0.60) → 'TRAFFIC_NETWORK'
+```
+
+**On the frontend** (`Dashboard.tsx`), this is **re-derived** after the city multiplier is applied, using the same 0.60 threshold:
+
+```typescript
+const CRISIS_THRESHOLD = 0.60;
+const scaledAqiRisk = Math.min(scaledCascade.aqi_impact / 500, 1);
+
+if (scaledAqiRisk           >= CRISIS_THRESHOLD) → 'AIR_QUALITY'
+if (scaledCascade.water_stress >= CRISIS_THRESHOLD) → 'WATER_SUPPLY'
+if (scaledCascade.health_risk  >= CRISIS_THRESHOLD) → 'PUBLIC_HEALTH'
+if (scaledCascade.traffic_disruption >= CRISIS_THRESHOLD) → 'TRAFFIC_NETWORK'
+```
+
+> The frontend re-derives triggered systems **because the city multiplier can push a value above 0.60 even if the backend didn't trigger it** — ensuring the displayed alerts match the scaled values shown in the cards.
+
+> **❌ No ML.** Pure threshold comparison on cascade outputs.
+
+---
+
+## 6. Panel 4 — Latest Sensor Readings
+
+```
+Latest Sensor Readings
+AQI              Traffic Density
+178              65%
+
+Water Contamination    Industrial Emissions
+72.0%                  105 kg/h
+```
+
+### AQI (`latest_data.aqi`)
+- Source: `MongoDB.aqi` (raw sensor/seed value)
+- Transformation: `city.baseAqi + (raw_aqi - 98) × riskMultiplier`
+- Why `- 98`? `98` is the approximate all-city average AQI baseline. The formula offsets the reading relative to each city's known pollution level.
+
+### Traffic Density (`latest_data.traffic_index`)
+- Source: `MongoDB.traffic` (0–100)
+- Transformation in `api.ts`: `traffic / 100` → stored as 0–1
+- Dashboard: `× 100` to display as `%`
+- **Displayed as:** `(traffic_index × 100).toFixed(0) + "%"`
+
+### Water Contamination (`latest_data.water_quality`)
+- Source: `MongoDB.water_quality` (0–100, where 100 = clean)
+- `api.ts`: `water_quality / 100` → stored as 0–1
+- Dashboard: `× 100` to display as `%`
+- **Confusing naming:** The label says "Water Contamination" but the value is actually the **quality** score (higher = cleaner). So `72%` means 72% quality, not 72% contaminated.
+
+### Industrial Emissions (`latest_data.industrial_emissions`)
+- Source: `MongoDB.industry_emission` (0–100 index)
+- `api.ts`: `industry_emission × 3` → rough kg/h approximation
+- Displayed with `kg/h` unit label
+
+> **❌ No ML.** All direct readings from MongoDB, scaled for display.
+
+---
+
+## 7. Panel 5 — 7-Day Urban Crisis Trend Chart
+
+```
+7-Day Urban Crisis Trend               [WORSENING]
+
+   AQI ── Risk Score % ── Water Quality ─ ─ Traffic ─ ─
+200│                                    ⚠ Crisis 60%
+150│          ●──●──●──●──●──●
+100│  ●──●
+   └──────────────────────────────────────────────────
+   May 17  May 18  May 19  May 20  May 21  May 22  May 23
+```
+
+### How this chart is built
+
+**Function called:** `getHistoryRaw(city.id)` → `GET /history?cityId=bengaluru`
+
+**Backend `history.js` runs a MongoDB aggregation pipeline:**
+
+```javascript
+[
+  { $match: { cityId: "bengaluru" } },
+  {
+    $group: {
+      _id: { cityId, year, month, day },   // group by day
+      latestRecord: { $last: "$$ROOT" },    // keep the newest reading per day
+      date: { $first: "$date" }
+    }
+  },
+  { $sort: { year: -1, month: -1, day: -1 } },  // newest first
+  { $limit: 7 },                                  // last 7 days
+  { $replaceRoot: { newRoot: "$latestRecord" } }  // flatten
+]
+```
+
+**Then for each day record:**
+```javascript
+const riskResult = computeRisk(rec, heatwaveLevel);  // ← cascade engine
+risk_scores.push(riskResult.risk_score);
+```
+
+**So the chart gets:**
+```
+labels:          ["May 17", "May 18", ..., "May 23"]
+aqi:             [145, 152, 158, 165, 170, 175, 178]
+water_quality:   [78, 76, 75, 74, 73, 72, 72]
+traffic:         [55, 58, 60, 62, 63, 65, 65]
+risk_scores:     [0.28, 0.31, 0.33, 0.36, 0.38, 0.41, 0.42]
+```
+
+**Dashboard transforms for chart:**
+```typescript
+risk_pct = risk_scores[i] × city.riskMultiplier × 100
+// e.g. 0.42 × 1.0 × 100 = 42.0
+```
+
+### Trend Direction label
+
+Computed in `history.js`:
+```javascript
+const delta = lastRisk - firstRisk;
+
+if (Math.abs(delta) < 0.05) → 'STABLE'
+if (delta > 0)              → 'WORSENING'
+if (delta < 0)              → 'IMPROVING'
+```
+
+The label (`WORSENING` / `IMPROVING` / `STABLE`) appears as a colored badge beside the chart title.
+
+### Chart lines and axes
+
+| Line | Color | Y-Axis | Data |
+|------|-------|--------|------|
+| AQI | 🟠 Orange | Left (raw values) | `aqi` |
+| Risk Score % | 🔴 Red | Right (0–100%) | `risk_pct` |
+| Water Quality | 🔵 Blue dashed | Left | `water_quality` |
+| Traffic Density | 🟣 Purple dashed | Left | `traffic` |
+
+**Reference line:** A dashed red line at `60%` on the right Y-axis marks the **crisis threshold** — the point where the cascade engine starts triggering alert systems.
+
+> **❌ No ML.** Chart data is computed by the cascade engine applied to each historical MongoDB record.
+
+---
+
+## 8. Real-Time WebSocket Updates
+
+The dashboard **stays live** using a WebSocket connection.
+
+**Connection:**
+```typescript
+ws = new WebSocket('ws://localhost:5000');
+```
+
+**What happens on `RISK_UPDATE` message:**
+
+Every **2 minutes**, `sensorSimulator.js` on the backend:
+1. Applies a random ±2.5% drift to each sensor value
+2. Upserts the new reading into MongoDB
+3. Computes a new risk score via `computeRisk(record, 0)`
+4. Broadcasts via WebSocket:
+
+```json
+{
+    "type": "RISK_UPDATE",
+    "cityId": "bengaluru",
+    "timestamp": "2026-05-23T15:30:00.000Z",
+    "risk_score": 0.43,
+    "data": {
+        "aqi": 181,
+        "traffic": 66,
+        "water_quality": 71,
+        "industry_emission": 36
+    }
+}
+```
+
+**Dashboard receives this and updates state:**
+```typescript
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'RISK_UPDATE' && data.cityId === city.id) {
+        setStatus(prev => ({
+            ...prev,
+            risk_score: data.risk_score,
+            latest_data: {
+                ...prev.latest_data,
+                aqi:                  data.data.aqi,
+                traffic_index:        data.data.traffic / 100,
+                water_quality:        data.data.water_quality / 100,
+                industrial_emissions: Math.round(data.data.industry_emission × 3)
+            }
+        }));
+    }
+};
+```
+
+**Effect on dashboard:** All 4 sensor reading values (Panel 4) and the risk progress bar (Panel 1) update **without a page refresh** — the number visually changes every 2 minutes.
+
+**Polling fallback:** If WebSocket is unavailable, `setInterval(loadStatus, 30000)` polls the REST API every 30 seconds as backup.
+
+---
+
+## 9. City Multiplier — Why Values Differ Per City
+
+When you switch from **Bengaluru** to **Delhi** in the city selector, the same MongoDB data (which is seeded for Bengaluru) gets scaled differently.
+
+Each city in the `CityContext` has:
+```typescript
+{
+    id: 'delhi',
+    name: 'Delhi',
+    baseAqi: 220,           // Delhi's typical baseline AQI
+    riskMultiplier: 1.45,   // Delhi is historically 45% more at-risk
+    ...
+}
+```
+
+**Scaling applied in `loadStatus()`:**
+
+```typescript
+// Risk score
+scaledRisk = Math.min(rawRisk × riskMultiplier, 1)
+// e.g. 0.42 × 1.45 = 0.609 → displayed as 61%
+
+// AQI reading
+aqi = Math.round(city.baseAqi + (rawAqi - 98) × riskMultiplier)
+// e.g. 220 + (178 - 98) × 1.45 = 220 + 116 = 336
+
+// Water stress
+water_stress = Math.min(rawWaterStress × riskMultiplier, 1)
+
+// Health risk
+health_risk = Math.min(rawHealthRisk × riskMultiplier, 1)
+
+// Traffic
+traffic_disruption = Math.min(rawTraffic × riskMultiplier, 1)
+```
+
+**Why `98` as the AQI offset?**  
+`98` is approximately the mean AQI across all seeded cities. The formula recenters the raw reading around each city's known air quality baseline, so Delhi starts much higher than Bengaluru even with the same database record.
+
+---
+
+## 10. Does the Dashboard Use ML?
+
+| Panel | Uses ML? | Reason |
+|-------|---------|--------|
+| Risk Score (Panel 1) | ❌ No | Cascade engine formula |
+| AQI Card (Panel 2) | ❌ No | Raw MongoDB reading |
+| Water Stress Card | ❌ No | Cascade propagation formula |
+| Health Risk Card | ❌ No | Cascade propagation formula |
+| Traffic Card | ❌ No | Normalized sensor value |
+| Triggered Systems (Panel 3) | ❌ No | Threshold comparison on cascade output |
+| Sensor Readings (Panel 4) | ❌ No | Direct MongoDB values |
+| 7-Day Chart (Panel 5) | ❌ No | Cascade engine on historical records |
+| WebSocket live updates | ❌ No | Cascade engine on simulated sensor data |
+
+> **The dashboard page does NOT use any ML model.**
+> 
+> The Python ML service (Prophet + XGBoost) is used **only** in:
+> - **Forecast page** (`/app/forecast`) — 7-day AQI + water predictions
+> - **Simulate → Compare** — ML forecast per scenario  
+> - **Transparency page** — SHAP feature importance
+
+---
+
+## 11. Full Function Call Chain
+
+```
+Dashboard.tsx mounts
+│
+├─ loadStatus()
+│   ├─ api.ts::getStatus(city.id)
+│   │   └─ GET /status?cityId=bengaluru
+│   │       └─ routes/status.js
+│   │           ├─ EnvironmentalData.findOne({ cityId }).sort({ date: -1 })
+│   │           │   └─ MongoDB query → latest record
+│   │           └─ engine/cascadeEngine.js::computeRisk(latest, 0)
+│   │               ├─ engine/dataProcessor.js::normalizeAll(rawData)
+│   │               │   ├─ normalizeAQI(aqi)           = aqi / 500
+│   │               │   ├─ normalizeTraffic(traffic)   = traffic / 100
+│   │               │   ├─ normalizeWater(water_quality) = (100 - wq) / 100
+│   │               │   └─ normalizeEmissions(industry) = industry / 100
+│   │               └─ runCascade(normalized, heatwaveLevel=0)
+│   │                   ├─ Iteration 1,2,3: Markov propagation
+│   │                   │   Risk_next = BaseRisk + 0.8 × Σ(Risk × AdjacencyWeight)
+│   │                   ├─ risk_score = 0.40×aqi + 0.25×water + 0.20×health + 0.15×traffic
+│   │                   ├─ confidence_interval = risk ± margin
+│   │                   └─ triggered_systems (threshold 0.60)
+│   │
+│   └─ Dashboard.tsx::loadStatus (after api.ts transform)
+│       ├─ apply city.riskMultiplier to all values
+│       ├─ re-derive triggered_systems from scaled values
+│       ├─ re-derive crisis_level from scaled risk
+│       └─ setStatus(scaledData)  → re-renders Panels 1,2,3,4
+│
+├─ loadHistory()
+│   ├─ api.ts::getHistoryRaw(city.id)
+│   │   └─ GET /history?cityId=bengaluru
+│   │       └─ routes/history.js
+│   │           ├─ MongoDB aggregation pipeline (group by day, limit 7)
+│   │           └─ for each day: cascadeEngine.js::computeRisk(rec, 0)
+│   │
+│   └─ Dashboard.tsx maps to HistoryChartPoint[]
+│       ├─ label, aqi, water_quality, traffic (raw)
+│       └─ risk_pct = risk_score × riskMultiplier × 100
+│           → setHistoryData(points)  → re-renders Panel 5
+│
+└─ WebSocket
+    └─ ws.onmessage: RISK_UPDATE
+        ├─ sensor simulator computed computeRisk() server-side
+        └─ setStatus(prev → updated aqi, traffic, water, emissions)
+            → live update of Panels 1 and 4
+```
+
+---
+
+## 12. All Formulas Used in the Dashboard
+
+| Formula | Where Used | What It Computes |
+|---------|-----------|-----------------|
+| `aqi / 500` | dataProcessor.js | AQI risk (0–1) |
+| `(100 - water_quality) / 100` | dataProcessor.js | Water risk — **inverted** (lower quality = higher risk) |
+| `traffic / 100` | dataProcessor.js | Traffic risk (0–1) |
+| `industry_emission / 100` | dataProcessor.js | Emissions risk (0–1) |
+| `BaseRisk + 0.8 × Σ(Risk × Weight)` | cascadeEngine.js | Cascade propagation per node per iteration |
+| `0.40×AQI + 0.25×Water + 0.20×Health + 0.15×Traffic` | cascadeEngine.js | **Composite risk score** |
+| `sin(Date.now()/10000) × 0.04` | cascadeEngine.js | Dynamic confidence interval variance |
+| `risk ± margin × risk` | cascadeEngine.js | Confidence interval lower/upper bounds |
+| `(CRISIS_THRESHOLD - risk) / 0.05` | cascadeEngine.js | Time-to-impact estimate |
+| `rawRisk × city.riskMultiplier` | Dashboard.tsx | City-scaled risk score |
+| `city.baseAqi + (rawAqi - 98) × multiplier` | Dashboard.tsx | City-scaled AQI display |
+| `rawCascade × multiplier` (clamped 0–1) | Dashboard.tsx | City-scaled water/health/traffic |
+| `scaled >= 0.60` | Dashboard.tsx | Re-derive triggered systems |
+| `risk_score × multiplier × 100` | Dashboard.tsx | Risk % for chart |
+| `lastRisk - firstRisk` | history.js | Trend delta |
+| `abs(delta) < 0.05` | history.js | STABLE / WORSENING / IMPROVING |
+| `industry_emission × 3` | api.ts | Emission index → approximate kg/h |
+| `traffic / 100` | api.ts | % → 0–1 normalization |
+| `water_quality / 100` | api.ts | % → 0–1 normalization |
+| `(Math.random()-0.5) × 0.05 × max` | sensorSimulator.js | Sensor ±2.5% drift per tick |

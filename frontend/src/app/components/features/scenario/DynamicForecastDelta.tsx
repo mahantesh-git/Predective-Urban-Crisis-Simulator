@@ -20,8 +20,8 @@ export function DynamicForecastDelta({ baselineForecast, scenarioForecast, metri
 
     const chartData = baselineForecast.labels.map((label, index) => ({
         name: label,
-        baseline: baselineForecast.aqi_forecast[index] || 0,
-        scenario: scenarioForecast.aqi_forecast[index] || 0,
+        baseline: Math.max(0, baselineForecast.aqi_forecast[index] || 0),
+        scenario: Math.max(0, scenarioForecast.aqi_forecast[index] || 0),
     }));
 
     return (
@@ -43,7 +43,7 @@ export function DynamicForecastDelta({ baselineForecast, scenarioForecast, metri
                     <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                         <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickMargin={10} />
-                        <YAxis stroke="#64748b" fontSize={10} domain={['auto', 'auto']} />
+                        <YAxis stroke="#64748b" fontSize={10} domain={[0, 'auto']} />
                         <Tooltip
                             contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px' }}
                             itemStyle={{ fontWeight: 'bold' }}

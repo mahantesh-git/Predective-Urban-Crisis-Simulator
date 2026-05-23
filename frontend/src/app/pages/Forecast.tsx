@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getForecast } from '../api';
+import { getForecast, getStatus } from '../api';
 import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line } from 'recharts';
@@ -46,6 +46,7 @@ export function Forecast() {
   const [forecast, setForecast] = useState<ForecastData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDays, setSelectedDays] = useState(7);
+  const [currentAqi, setCurrentAqi] = useState<number>(city.baseAqi);
 
   useEffect(() => {
     setLoading(true);
@@ -54,16 +55,37 @@ export function Forecast() {
 
   const loadForecast = async (days: number) => {
     try {
-      const raw = await getForecast(days, city.id);
-      const m = city.riskMultiplier;
-      const baseAqi = city.baseAqi;
+      // Fetch forecast and current status in parallel so the forecast chart
+      // is anchored to the same live AQI value the Dashboard displays.
+      const [raw, statusData] = await Promise.all([
+        getForecast(days, city.id),
+        getStatus(city.id),
+      ]);
 
-      const scaleAqi = (v: number) => Math.round(baseAqi + (v - 98) * m);
-      const scaleWater = (v: number) => Math.min(v * m, 1);
+      const m = city.riskMultiplier;
+
+      // Current real AQI — same calculation used in Dashboard.tsx.
+      const liveAqi = Math.max(
+        0,
+        Math.round(city.baseAqi + ((statusData?.latest_data?.aqi || city.baseAqi) - city.baseAqi) * m)
+      );
+      setCurrentAqi(liveAqi);
+
+      // Prophet's internal centre: the mean of its raw forecast values.
+      // We use this to measure each prediction's *deviation* from Prophet's norm,
+      // then apply that deviation on top of the real live AQI.
+      const rawAqiForecast: number[] = raw.aqi_forecast || [];
+      const prophetMean = rawAqiForecast.length > 0
+        ? rawAqiForecast.reduce((a: number, b: number) => a + b, 0) / rawAqiForecast.length
+        : city.baseAqi;
+
+      // scaleAqi: preserve Prophet's trend shape, anchored to the live current AQI.
+      const scaleAqi = (v: number) => Math.max(0, Math.round(liveAqi + (v - prophetMean) * m));
+      const scaleWater = (v: number) => Math.max(0, Math.min(v * m, 1));
 
       const scaled: ForecastData = {
         ...raw,
-        aqi_forecast: (raw.aqi_forecast || []).map(scaleAqi),
+        aqi_forecast: rawAqiForecast.map(scaleAqi),
         water_stress_forecast: (raw.water_stress_forecast || []).map(scaleWater),
         confidence_bands: {
           aqi: {
@@ -175,7 +197,7 @@ export function Forecast() {
               <div className="flex items-center gap-2 mb-6">
                 <Cloud className="w-5 h-5 text-red-500" />
                 <h3 className="text-lg font-semibold text-card-foreground">Air Quality Index (AQI) Forecast</h3>
-                <span className="ml-auto text-sm text-muted-foreground">Base AQI: {city.baseAqi}</span>
+                <span className="ml-auto text-sm text-muted-foreground">Current AQI: {currentAqi}</span>
               </div>
               <ResponsiveContainer width="100%" height={350}>
                 <AreaChart data={aqiData}>

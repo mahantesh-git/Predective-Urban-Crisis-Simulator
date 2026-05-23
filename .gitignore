@@ -21,3 +21,6 @@ smart_city_ml/data/
 *.nc4
 *__pycache__/
 .venv/
+dashboard_walkthrough.md
+PUECS_ML_pipeline.pptx
+puecs_technical_documentation.md

@@ -120,26 +120,26 @@ function deriveMetrics(aqi, cityId, dateStr) {
 
 const seed = async () => {
     await connectDB();
-    console.log('🌱 Seeding CitySentinel with REAL Kaggle AQI data (pre-processed)...\n');
+    console.log('Seeding CitySentinel with REAL Kaggle AQI data (pre-processed)...\n');
 
     const jsonPath = path.join(__dirname, '../../datasets/city_aqi_clean.json');
     const csvPath = path.join(__dirname, '../../datasets/city_day.csv');
 
     if (!fs.existsSync(jsonPath)) {
         // Try to generate it on-the-fly if Python is available
-        console.log('⚙️  city_aqi_clean.json not found, generating from CSV...');
+        console.log('city_aqi_clean.json not found, generating from CSV...');
         if (!fs.existsSync(csvPath)) {
-            console.error('❌ Neither city_aqi_clean.json nor city_day.csv found. Please run the Python pre-processor.');
+            console.error('Neither city_aqi_clean.json nor city_day.csv found. Please run the Python pre-processor.');
             process.exit(1);
         }
     }
 
     const rawRecords = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-    console.log(`📂 Loaded ${rawRecords.length} clean AQI records from city_aqi_clean.json`);
+    console.log(` Loaded ${rawRecords.length} clean AQI records from city_aqi_clean.json`);
 
     // Clear existing environmental data
     const deleted = await EnvironmentalData.deleteMany({});
-    console.log(`🗑️  Cleared ${deleted.deletedCount} existing records.`);
+    console.log(` Cleared ${deleted.deletedCount} existing records.`);
 
     // Group records by cityId using the CITY_MAP
     const cityGroups = {};
@@ -171,9 +171,9 @@ const seed = async () => {
             await EnvironmentalData.insertMany(docs, { ordered: false });
             totalInserted += docs.length;
             const avgAqi = Math.round(docs.reduce((s, d) => s + d.aqi, 0) / docs.length);
-            console.log(`✅ ${cityId}: ${docs.length} days seeded (avg AQI: ${avgAqi})`);
+            console.log(`${cityId}: ${docs.length} days seeded (avg AQI: ${avgAqi})`);
         } catch (e) {
-            console.warn(`⚠️  ${cityId}: partial insert —`, e.message?.slice(0, 80));
+            console.warn(`${cityId}: partial insert —`, e.message?.slice(0, 80));
         }
     }
 

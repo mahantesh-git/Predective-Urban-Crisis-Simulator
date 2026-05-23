@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { simulate, compareScenarios, getForecast, getScenarioForecast } from '../api';
+import { simulate, compareScenarios } from '../api';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Slider } from '../components/ui/slider';
@@ -11,7 +11,8 @@ import { PageTransition } from '../components/PageTransition';
 import { PageHeader } from '../components/PageHeader';
 import { useCity } from '../context/CityContext';
 import { CascadingRiskGraph } from '../components/network/CascadingRiskGraph';
-import { DynamicForecastDelta } from '../components/features/scenario/DynamicForecastDelta';
+
+import { SimulationRecommendations } from '../components/features/scenario/SimulationRecommendations';
 
 interface SimulationResult {
   baseline: {
@@ -56,8 +57,6 @@ export function Simulate() {
   const [greenSpaceExpansion, setGreenSpaceExpansion] = useState(20);
 
   const [result, setResult] = useState<SimulationResult | null>(null);
-  const [baselineForecast, setBaselineForecast] = useState<any>(null);
-  const [scenarioForecast, setScenarioForecast] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   const [scenarios, setScenarios] = useState<Scenario[]>([
@@ -99,27 +98,36 @@ export function Simulate() {
   const runSimulation = async () => {
     setLoading(true);
     try {
-      const [data, baseFc, shiftFc] = await Promise.all([
-        simulate({
-          trafficReduction,
-          industrialCut,
-          heatwaveLevel,
-          waterConservation,
-          greenSpaceExpansion,
-        } as any),
-        getForecast(7),
-        getScenarioForecast({
-          scenario_traffic_delta: -(trafficReduction / 100),
-          scenario_industry_delta: -(industrialCut / 100)
-        })
-      ]);
-      setBaselineForecast(baseFc);
-      setScenarioForecast(shiftFc);
+      const data = await simulate({
+        trafficReduction,
+        industrialCut,
+        heatwaveLevel,
+        waterConservation,
+        greenSpaceExpansion,
+        cityId: city.id,
+      } as any);
 
       // Apply city multiplier for consistency with Dashboard
       const m = city.riskMultiplier;
       const rawBaseline = (data.baseline?.risk_score || 0) * m;
       const rawResult = (data.result?.risk_score || 0) * m;
+
+      // Re-derive triggered_systems from SCALED cascade values (same 0.60 threshold as backend)
+      const CRISIS_THRESHOLD = 0.60;
+      const deriveTriggered = (node: any): string[] => {
+        const fx = node?.cascade_effects;
+        if (!fx) return [];
+        const systems: string[] = [];
+        const aqiRisk = Math.min((fx.aqi_impact || 0) / 500, 1) * m;
+        const waterRisk = Math.min((fx.water_stress || 0) * m, 1);
+        const healthRisk = Math.min((fx.health_risk || 0) * m, 1);
+        const trafficRisk = Math.min((fx.traffic_disruption || 0) * m, 1);
+        if (aqiRisk >= CRISIS_THRESHOLD) systems.push('AIR_QUALITY');
+        if (waterRisk >= CRISIS_THRESHOLD) systems.push('WATER_SUPPLY');
+        if (healthRisk >= CRISIS_THRESHOLD) systems.push('PUBLIC_HEALTH');
+        if (trafficRisk >= CRISIS_THRESHOLD) systems.push('TRAFFIC_NETWORK');
+        return systems;
+      };
 
       const scaledResult = {
         ...data,
@@ -127,11 +135,13 @@ export function Simulate() {
           ...data.baseline,
           risk_score: Math.min(rawBaseline, 1),
           crisis_level: getLevel(Math.min(rawBaseline, 1)),
+          triggered_systems: deriveTriggered(data.baseline),
         },
         result: {
           ...data.result,
           risk_score: Math.min(rawResult, 1),
           crisis_level: getLevel(Math.min(rawResult, 1)),
+          triggered_systems: deriveTriggered(data.result),
           confidence_interval: data.result?.confidence_interval ? {
             lower: Math.max(0, Math.min(1, data.result.confidence_interval.lower * m)),
             upper: Math.max(0, Math.min(1, data.result.confidence_interval.upper * m)),
@@ -158,7 +168,7 @@ export function Simulate() {
   const runComparison = async () => {
     setComparingLoading(true);
     try {
-      const data = await compareScenarios(scenarios);
+      const data = await compareScenarios(scenarios, city.id);
 
       // Apply scaling to comparison results
       const m = city.riskMultiplier;
@@ -359,8 +369,8 @@ export function Simulate() {
                       <div className="flex items-center justify-between mb-4">
                         <TabsList className="bg-slate-900 border border-slate-800">
                           <TabsTrigger value="overview" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-slate-950 font-bold text-xs">Overview</TabsTrigger>
-                          <TabsTrigger value="forecasts" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-slate-950 font-bold text-xs">AI Forecasts</TabsTrigger>
                           <TabsTrigger value="network" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-slate-950 font-bold text-xs">Network Map</TabsTrigger>
+                          <TabsTrigger value="recommendations" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-slate-950 font-bold text-xs">Recommendations</TabsTrigger>
                         </TabsList>
                         {/* Restoration Summary Mini */}
                         <div className="px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center gap-2">
@@ -448,12 +458,6 @@ export function Simulate() {
                                 )}
                               </div>
 
-                              <div className="pt-3 border-t border-slate-800 flex items-center gap-3">
-                                <div className="text-2xl font-black text-emerald-400">-{result.delta.percentage_improvement}%</div>
-                                <div className="text-[9px] leading-tight text-slate-400 font-medium pb-1">
-                                  Reduction in cascading risks.
-                                </div>
-                              </div>
                             </div>
                           </Card>
                         </div>
@@ -496,44 +500,25 @@ export function Simulate() {
                               <p className="text-[9px] text-slate-500 font-bold mt-1">RESILIENCE FACTOR</p>
                             </div>
                           </div>
-                        </Card>
-                      </TabsContent>
+                        </Card>                      </TabsContent>
 
-                      <TabsContent value="forecasts" className="m-0 outline-none flex-1">
-                        {/* Dynamic AI Forecast Deltas */}
-                        {(baselineForecast && scenarioForecast) ? (
-                          <div className="grid grid-cols-1 gap-4">
-                            <div className="h-[250px]">
-                              <DynamicForecastDelta
-                                baselineForecast={baselineForecast}
-                                scenarioForecast={scenarioForecast}
-                                metricLabel="AQI"
-                              />
-                            </div>
-                            <div className="h-[250px]">
-                              <DynamicForecastDelta
-                                baselineForecast={{
-                                  ...baselineForecast,
-                                  aqi_forecast: baselineForecast.water_stress_forecast.map((v: number) => v * 100)
-                                }}
-                                scenarioForecast={{
-                                  ...scenarioForecast,
-                                  aqi_forecast: scenarioForecast.water_stress_forecast.map((v: number) => v * 100)
-                                }}
-                                metricLabel="Water Stress %"
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="h-full flex items-center justify-center text-slate-500 text-sm">Forecast data not available</div>
-                        )}
-                      </TabsContent>
 
                       <TabsContent value="network" className="m-0 outline-none flex-1 flex flex-col min-h-[400px]">
                         <div className="flex-1 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden pt-4">
                           <CascadingRiskGraph
                             baseline={result.baseline.cascade_effects}
                             simulated={result.result.cascade_effects}
+                          />
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="recommendations" className="m-0 outline-none flex-1">
+                        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+                          <SimulationRecommendations
+                            cityId={city.id}
+                            simulatedRiskScore={result.result.risk_score}
+                            simulatedCrisisLevel={result.result.crisis_level}
+                            triggeredSystems={result.result.triggered_systems}
                           />
                         </div>
                       </TabsContent>
@@ -684,44 +669,121 @@ export function Simulate() {
 
             {comparisonResult && (
               <Card className="bg-slate-950 border-slate-800 p-6 shadow-xl animate-in zoom-in-95 duration-500 mt-8 rounded-xl">
-                <h3 className="text-lg font-bold text-white mb-6 border-b border-slate-800 pb-4 flex items-center gap-3">
+                <h3 className="text-lg font-bold text-white mb-2 border-b border-slate-800 pb-4 flex items-center gap-3">
                   <Trophy className="w-5 h-5 text-yellow-500" />
                   Optimal Strategy Ranking
                 </h3>
-                <div className="space-y-3">
+
+                {/* Summary Bar */}
+                <div className="flex flex-wrap items-center gap-4 mb-5 p-3 rounded-lg bg-slate-900 border border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Winner:</span>
+                    <Badge className="bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 font-bold text-[10px] px-2">{comparisonResult.winner}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Scenarios:</span>
+                    <span className="text-sm font-black text-white">{comparisonResult.total_scenarios}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Baseline Risk:</span>
+                    <span className="text-sm font-black text-white">{(comparisonResult.baseline_risk * 100).toFixed(0)}%</span>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
                   {comparisonResult.comparison.map((row: any, index: number) => (
                     <div
                       key={index}
-                      className={`p-4 rounded-lg flex items-center justify-between group transition-all ${index === 0
+                      className={`p-4 rounded-xl flex flex-col gap-3 transition-all ${index === 0
                         ? 'bg-emerald-500/10 border border-emerald-500/50'
                         : 'bg-slate-900 border border-slate-800 hover:border-slate-700'
                         }`}
                     >
-                      <div className="flex items-center gap-4">
-                        <div className={`w-8 h-8 rounded-md flex items-center justify-center font-bold text-xs ${index === 0 ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'bg-slate-800 text-slate-400 border border-slate-700'
-                          }`}>
-                          #{index + 1}
-                        </div>
-                        <div>
-                          <p className="font-bold text-sm text-slate-200">{row.label}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge className={`${getCrisisColor(row.crisis_level)} border-0 text-white font-bold text-[9px] px-1.5 py-0 uppercase`}>
-                              {row.crisis_level}
-                            </Badge>
-                            {index === 0 && <Badge className="bg-yellow-500/10 text-yellow-500 font-bold text-[9px] px-1.5 py-0 uppercase border border-yellow-500/20">Recommended AI Path</Badge>}
+                      {/* Top Row: rank + label + score */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-md flex items-center justify-center font-bold text-xs shrink-0 ${index === 0 ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'bg-slate-800 text-slate-400 border border-slate-700'}`}>
+                            #{index + 1}
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm text-slate-200">{row.label}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge className={`${getCrisisColor(row.crisis_level)} border-0 text-white font-bold text-[9px] px-1.5 py-0 uppercase`}>{row.crisis_level}</Badge>
+                              {index === 0 && <Badge className="bg-yellow-500/10 text-yellow-500 font-bold text-[9px] px-1.5 py-0 uppercase border border-yellow-500/20">Recommended AI Path</Badge>}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="flex items-end justify-end gap-0.5 mb-1">
-                          <span className="text-xl font-bold text-white">{(row.risk_score * 100).toFixed(0)}</span>
-                          <span className="text-xs font-bold text-slate-500 pb-1">%</span>
+                        <div className="text-right shrink-0">
+                          <div className="flex items-end justify-end gap-0.5 mb-1">
+                            <span className="text-xl font-bold text-white">{(row.risk_score * 100).toFixed(0)}</span>
+                            <span className="text-xs font-bold text-slate-500 pb-1">%</span>
+                          </div>
+                          <p className="text-[10px] font-bold text-emerald-400 uppercase">↓ {row.percentage_improvement}% REDUCTION</p>
                         </div>
-                        <p className="text-[10px] font-bold text-emerald-400 uppercase">↓ {row.percentage_improvement}% REDUCTION</p>
                       </div>
+
+                      {/* Policy Parameters */}
+                      <div className="grid grid-cols-5 gap-2 pt-2 border-t border-slate-800/60">
+                        <div className="text-center p-1.5 rounded-md bg-slate-900/80">
+                          <p className="text-[9px] font-bold text-slate-500 uppercase mb-0.5">Traffic Cut</p>
+                          <p className="text-sm font-black text-emerald-400">{row.policy?.trafficReduction ?? 0}%</p>
+                        </div>
+                        <div className="text-center p-1.5 rounded-md bg-slate-900/80">
+                          <p className="text-[9px] font-bold text-slate-500 uppercase mb-0.5">Industry Cut</p>
+                          <p className="text-sm font-black text-emerald-400">{row.policy?.industrialCut ?? 0}%</p>
+                        </div>
+                        <div className="text-center p-1.5 rounded-md bg-slate-900/80">
+                          <p className="text-[9px] font-bold text-slate-500 uppercase mb-0.5">Heatwave</p>
+                          <p className="text-sm font-black text-orange-400">Lvl {row.policy?.heatwaveLevel ?? 0}</p>
+                        </div>
+                        <div className="text-center p-1.5 rounded-md bg-slate-900/80">
+                          <p className="text-[9px] font-bold text-slate-500 uppercase mb-0.5">Water</p>
+                          <p className="text-sm font-black text-emerald-400">{row.policy?.waterConservation ?? 0}%</p>
+                        </div>
+                        <div className="text-center p-1.5 rounded-md bg-slate-900/80">
+                          <p className="text-[9px] font-bold text-slate-500 uppercase mb-0.5">Greenery</p>
+                          <p className="text-sm font-black text-emerald-400">{row.policy?.greenSpaceExpansion ?? 0}%</p>
+                        </div>
+                      </div>
+
+                      {/* Triggered Systems */}
+                      {row.triggered_systems?.length > 0 && (
+                        <div className="pt-1">
+                          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Triggered Systems:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {row.triggered_systems.slice(0, 4).map((sys: string) => (
+                              <Badge key={sys} variant="outline" className="bg-slate-950/50 border-slate-700 text-slate-400 text-[9px] py-0 px-1.5">
+                                {sys.replace(/_/g, ' ')}
+                              </Badge>
+                            ))}
+                            {row.triggered_systems.length > 4 && (
+                              <Badge variant="outline" className="bg-slate-950/50 border-slate-700 text-slate-500 text-[9px] py-0 px-1.5">
+                                +{row.triggered_systems.length - 4} more
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
+
+                {/* AI Policy Recommendations for the Winner */}
+                {comparisonResult.comparison.length > 0 && (
+                  <div className="mt-6 border-t border-slate-800 pt-6">
+                    <h4 className="text-sm font-bold text-slate-300 uppercase tracking-widest mb-4">
+                      Strategic Interventions for {comparisonResult.winner}
+                    </h4>
+                    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
+                      <SimulationRecommendations
+                        cityId={city.id}
+                        simulatedRiskScore={comparisonResult.comparison[0].risk_score}
+                        simulatedCrisisLevel={comparisonResult.comparison[0].crisis_level}
+                        triggeredSystems={comparisonResult.comparison[0].triggered_systems}
+                      />
+                    </div>
+                  </div>
+                )}
               </Card>
             )}
           </TabsContent>

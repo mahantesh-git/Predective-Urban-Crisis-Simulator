@@ -69,7 +69,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 28.613,
         lng: 77.209,
         population_millions: 32.9,
-        riskMultiplier: 1.35,
+        riskMultiplier: 1.0,
         baseAqi: 215,
         tagline: 'Smog season, industrial Yamuna, and perpetual gridlock',
         zones: [
@@ -93,7 +93,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 19.076,
         lng: 72.877,
         population_millions: 20.7,
-        riskMultiplier: 1.15,
+        riskMultiplier: 1.0,
         baseAqi: 145,
         tagline: 'Flooding coasts, industrial Dharavi, and Marine Drive smog',
         zones: [
@@ -117,7 +117,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 17.385,
         lng: 78.486,
         population_millions: 10.5,
-        riskMultiplier: 0.95,
+        riskMultiplier: 1.0,
         baseAqi: 128,
         tagline: 'Shrinking Hussain Sagar and hazardous APIIC zones',
         zones: [
@@ -141,7 +141,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 13.083,
         lng: 80.270,
         population_millions: 10.9,
-        riskMultiplier: 0.88,
+        riskMultiplier: 1.0,
         baseAqi: 112,
         tagline: 'Day Zero water crisis, Adyar flooding, and SIPCOT emissions',
         zones: [
@@ -165,7 +165,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 22.572,
         lng: 88.364,
         population_millions: 14.8,
-        riskMultiplier: 1.2,
+        riskMultiplier: 1.0,
         baseAqi: 178,
         tagline: 'Hooghly industrial corridor, flooding East Calcutta Wetlands',
         zones: [
@@ -189,7 +189,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 18.520,
         lng: 73.856,
         population_millions: 7.2,
-        riskMultiplier: 0.82,
+        riskMultiplier: 1.0,
         baseAqi: 95,
         tagline: 'Mula-Mutha sewage crisis and Pimpri-Chinchwad emissions',
         zones: [
@@ -213,7 +213,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 23.022,
         lng: 72.571,
         population_millions: 8.4,
-        riskMultiplier: 1.1,
+        riskMultiplier: 1.0,
         baseAqi: 162,
         tagline: 'Sabarmati industrial effluents and textile dye pollution',
         zones: [
@@ -237,7 +237,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 26.912,
         lng: 75.787,
         population_millions: 4.1,
-        riskMultiplier: 0.92,
+        riskMultiplier: 1.0,
         baseAqi: 143,
         tagline: 'Water scarcity, marble dust, and heritage zone air quality',
         zones: [
@@ -261,7 +261,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 26.846,
         lng: 80.946,
         population_millions: 4.6,
-        riskMultiplier: 1.05,
+        riskMultiplier: 1.0,
         baseAqi: 168,
         tagline: 'Gomti pollution, slum flooding, and winter smog',
         zones: [
@@ -285,7 +285,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 21.1702,
         lng: 72.8311,
         population_millions: 6.9,
-        riskMultiplier: 1.08,
+        riskMultiplier: 1.0,
         baseAqi: 155,
         tagline: 'Diamond industry emissions and Tapi river pollution',
         zones: [
@@ -309,8 +309,8 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 26.4499,
         lng: 80.3319,
         population_millions: 3.1,
-        riskMultiplier: 1.25,
-        baseAqi: 195,
+        riskMultiplier: 1.0,
+        baseAqi: 85,
         tagline: 'Leather tannery effluent and severe winter smog',
         zones: [
             { id: 'zone_industrial', name: 'Jajmau Tannery Cluster', type: 'INDUSTRIAL', description: 'Concentration of leather tanneries discharging untreated waste into the Ganges.', population: 35000 },
@@ -333,7 +333,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 21.1458,
         lng: 79.0882,
         population_millions: 2.9,
-        riskMultiplier: 0.90,
+        riskMultiplier: 1.0,
         baseAqi: 110,
         tagline: 'Extreme summer heatwaves and Nag river degradation',
         zones: [
@@ -357,7 +357,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 22.7196,
         lng: 75.8577,
         population_millions: 3.2,
-        riskMultiplier: 0.85,
+        riskMultiplier: 1.0,
         baseAqi: 125,
         tagline: 'Rapid urbanization stress on Kahn river ecosystem',
         zones: [
@@ -381,7 +381,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 17.6868,
         lng: 83.2185,
         population_millions: 2.3,
-        riskMultiplier: 0.98,
+        riskMultiplier: 1.0,
         baseAqi: 105,
         tagline: 'Coastal industrial pollution and cyclone vulnerability',
         zones: [
@@ -406,7 +406,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 23.7271,
         lng: 92.7176,
         population_millions: 0.4,
-        riskMultiplier: 0.60,
+        riskMultiplier: 1.0,
         baseAqi: 35,
         tagline: 'Clean air capital of Northeast India',
         zones: [
@@ -430,7 +430,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 16.5129,
         lng: 80.5159,
         population_millions: 0.1,
-        riskMultiplier: 0.75,
+        riskMultiplier: 1.0,
         baseAqi: 65,
         tagline: 'The planned capital on the Krishna riverbank',
         zones: [
@@ -454,7 +454,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 31.6340,
         lng: 74.8723,
         population_millions: 1.2,
-        riskMultiplier: 1.05,
+        riskMultiplier: 1.0,
         baseAqi: 145,
         tagline: 'Crop burning smog meets Golden Temple city',
         zones: [
@@ -478,7 +478,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 23.2599,
         lng: 77.4126,
         population_millions: 2.4,
-        riskMultiplier: 0.95,
+        riskMultiplier: 1.0,
         baseAqi: 118,
         tagline: 'City of Lakes shadowed by industrial legacy',
         zones: [
@@ -502,7 +502,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 11.0168,
         lng: 76.9558,
         population_millions: 2.1,
-        riskMultiplier: 0.78,
+        riskMultiplier: 1.0,
         baseAqi: 82,
         tagline: 'Textile city at the Nilgiri foothills',
         zones: [
@@ -526,7 +526,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 9.9816,
         lng: 76.2999,
         population_millions: 2.1,
-        riskMultiplier: 0.70,
+        riskMultiplier: 1.0,
         baseAqi: 70,
         tagline: 'Commercial capital of Gods Own Country',
         zones: [
@@ -550,7 +550,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 28.4595,
         lng: 77.0266,
         population_millions: 1.5,
-        riskMultiplier: 1.30,
+        riskMultiplier: 1.0,
         baseAqi: 195,
         tagline: 'NCR tech hub choking under construction dust',
         zones: [
@@ -574,7 +574,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 26.2389,
         lng: 73.0243,
         population_millions: 1.3,
-        riskMultiplier: 0.88,
+        riskMultiplier: 1.0,
         baseAqi: 102,
         tagline: 'Blue City battling desert dust and water scarcity',
         zones: [
@@ -598,7 +598,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 25.5941,
         lng: 85.1376,
         population_millions: 2.4,
-        riskMultiplier: 1.18,
+        riskMultiplier: 1.0,
         baseAqi: 160,
         tagline: 'Gangetic plains city under severe pollution load',
         zones: [
@@ -622,7 +622,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 25.5788,
         lng: 91.8933,
         population_millions: 0.4,
-        riskMultiplier: 0.65,
+        riskMultiplier: 1.0,
         baseAqi: 45,
         tagline: 'Scotland of the East — fog and forest under pressure',
         zones: [
@@ -646,7 +646,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 20.9517,
         lng: 85.2319,
         population_millions: 0.2,
-        riskMultiplier: 1.22,
+        riskMultiplier: 1.0,
         baseAqi: 172,
         tagline: 'Coal capital of Odisha — heavy industrial pollution',
         zones: [
@@ -670,7 +670,7 @@ export const INDIAN_CITIES: CityProfile[] = [
         lat: 8.5241,
         lng: 76.9366,
         population_millions: 1.7,
-        riskMultiplier: 0.72,
+        riskMultiplier: 1.0,
         baseAqi: 68,
         tagline: 'Kerala\'s capital where sea breeze meets urban sprawl',
         zones: [

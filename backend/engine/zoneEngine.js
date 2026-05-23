@@ -142,7 +142,20 @@ const getCityZones = (cityId) => {
         const raw = fs.readFileSync(CITY_ZONES_PATH, 'utf8');
         const data = JSON.parse(raw);
         if (data[cityId] && data[cityId].length > 0) {
-            return data[cityId].map((z) => {
+            const cityData = data[cityId];
+            const grouped = {};
+
+            cityData.forEach(z => {
+                if (!grouped[z.name]) {
+                    grouped[z.name] = { ...z };
+                } else {
+                    grouped[z.name].population += z.population;
+                    grouped[z.name].households += z.households || 0;
+                    // Keep the rest from the first entry
+                }
+            });
+
+            return Object.values(grouped).map((z) => {
                 const sens = SENSITIVITY_MAP[z.type] || SENSITIVITY_MAP.RESIDENTIAL;
                 const hh_size = z.population / Math.max(z.households, 1);
                 const p_norm = Math.min(hh_size / 8, 1.0); // Simple proxy for density norm

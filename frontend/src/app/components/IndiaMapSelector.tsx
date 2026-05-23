@@ -67,11 +67,11 @@ export function IndiaMapSelector({ isOpen, onClose }: IndiaMapSelectorProps) {
         setHovered(c);
     };
 
-    // Risk color based on city riskMultiplier
+    // Risk color based on city baseAqi
     const getDotColor = (c: CityProfile) => {
-        if (c.riskMultiplier >= 1.2) return '#ef4444'; // red — critical
-        if (c.riskMultiplier >= 1.0) return '#f97316'; // orange — high
-        if (c.riskMultiplier >= 0.9) return '#eab308'; // yellow — moderate
+        if (c.baseAqi >= 150) return '#ef4444'; // red — critical
+        if (c.baseAqi >= 100) return '#f97316'; // orange — high
+        if (c.baseAqi >= 60) return '#eab308'; // yellow — moderate
         return '#22c55e'; // green — low
     };
 

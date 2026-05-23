@@ -20,10 +20,6 @@ export function Home() {
                         <span className="text-xs font-bold tracking-wide">{city.name}</span>
                         <span className="text-xs text-[#6B4A34]">· {city.state}, India</span>
                     </div>
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/50 border border-[#4b2e1e]/10 shadow-sm backdrop-blur-sm">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-                        <span className="text-xs font-medium tracking-wide">SYSTEM ONLINE</span>
-                    </div>
                 </div>
             </nav>
 

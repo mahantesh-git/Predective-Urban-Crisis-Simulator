@@ -33,8 +33,11 @@ router.get('/', async (req, res, next) => {
         const heatwaveLevel = parseFloat(req.query.heatwaveLevel) || 0;
         const includeForecast = req.query.forecast === 'true';
 
-        // Get latest environmental reading for this city
-        const latest = await EnvironmentalData.findOne({ cityId }).sort({ date: -1 });
+        // Get latest environmental reading; fall back to bengaluru for unseeded cities
+        let latest = await EnvironmentalData.findOne({ cityId }).sort({ date: -1 });
+        if (!latest) {
+            latest = await EnvironmentalData.findOne({ cityId: 'bengaluru' }).sort({ date: -1 });
+        }
 
         if (!latest) {
             return res.status(404).json({
@@ -66,13 +69,6 @@ router.get('/', async (req, res, next) => {
 
         const response = {
             success: true,
-            timestamp: new Date().toISOString(),
-            global_risk: globalRisk,
-            crisis_level: getCrisisLevel(globalRisk),
-            global_cascade: cascadeEffects,
-            total_zones: zones.length,
-            affected_zones: affectedZones.length,
-            evacuation_priority_zones: evacuationZones.map((z) => z.name),
             zones,
         };
 

@@ -28,8 +28,11 @@ router.get('/', async (req, res, next) => {
         // Accept cityId from query param, default to 'bengaluru'
         const cityId = req.query.cityId || 'bengaluru';
 
-        // Fetch the most recent environmental reading for this city
-        const latest = await EnvironmentalData.findOne({ cityId }).sort({ date: -1 });
+        // Fallback: if no data for this city, use bengaluru as baseline
+        let latest = await EnvironmentalData.findOne({ cityId }).sort({ date: -1 });
+        if (!latest) {
+            latest = await EnvironmentalData.findOne({ cityId: 'bengaluru' }).sort({ date: -1 });
+        }
 
         if (!latest) {
             return res.status(404).json({
@@ -52,22 +55,15 @@ router.get('/', async (req, res, next) => {
 
         res.json({
             success: true,
-            timestamp: new Date().toISOString(),
             latest_data: {
-                date: latest.date,
-                aqi: latest.aqi,
-                traffic: latest.traffic,
-                water_quality: latest.water_quality,
-                industry_emission: latest.industry_emission,
-                temperature: latest.temperature || 30,
-                drought_index: latest.drought_index || 0,
+                aqi: Math.max(0, latest.aqi),
+                traffic: Math.max(0, latest.traffic),
+                water_quality: Math.max(0, latest.water_quality),
+                industry_emission: Math.max(0, latest.industry_emission),
             },
             risk_score: result.risk_score,
-            confidence_interval: result.confidence_interval,
             cascade_effects: result.cascade_effects,
             triggered_systems: result.triggered_systems,
-            time_to_impact: result.time_to_impact,
-            crisis_threshold: result.crisis_threshold,
             crisis_level: getCrisisLevel(result.risk_score),
         });
     } catch (err) {

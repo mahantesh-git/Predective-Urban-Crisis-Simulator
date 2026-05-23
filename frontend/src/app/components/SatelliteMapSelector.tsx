@@ -4,18 +4,18 @@ import { X } from 'lucide-react';
 import { useCity } from '../context/CityContext';
 import { CityProfile } from '../data/cities';
 
-// Risk color based on city riskMultiplier
+// Risk color based on city baseAqi
 function getDotColor(c: CityProfile) {
-    if (c.riskMultiplier >= 1.2) return '#ef4444'; // red — critical
-    if (c.riskMultiplier >= 1.0) return '#f97316'; // orange — high
-    if (c.riskMultiplier >= 0.9) return '#eab308'; // yellow — moderate
+    if (c.baseAqi >= 150) return '#ef4444'; // red — critical
+    if (c.baseAqi >= 100) return '#f97316'; // orange — high
+    if (c.baseAqi >= 60) return '#eab308'; // yellow — moderate
     return '#22c55e'; // green — low
 }
 
 function getRiskLabel(c: CityProfile) {
-    if (c.riskMultiplier >= 1.2) return 'CRITICAL';
-    if (c.riskMultiplier >= 1.0) return 'HIGH';
-    if (c.riskMultiplier >= 0.9) return 'MODERATE';
+    if (c.baseAqi >= 150) return 'CRITICAL';
+    if (c.baseAqi >= 100) return 'HIGH';
+    if (c.baseAqi >= 60) return 'MODERATE';
     return 'LOW';
 }
 

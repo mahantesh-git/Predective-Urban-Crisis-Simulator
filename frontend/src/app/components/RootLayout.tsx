@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router';
-import { Activity, Zap, TrendingUp, Target, Map, Clock, Leaf, MapPin, ChevronDown } from 'lucide-react';
+import { Activity, Zap, TrendingUp, Map, Clock, MapPin, ChevronDown } from 'lucide-react';
 import { WelcomeDialog } from './WelcomeDialog';
 import { AnimatePresence } from 'motion/react';
 import React from 'react';
@@ -17,9 +17,7 @@ export function RootLayout() {
     { path: '/app', label: 'Dashboard', icon: Activity },
     { path: '/app/simulate', label: 'Simulate', icon: Zap },
     { path: '/app/forecast', label: 'Forecast', icon: TrendingUp },
-    { path: '/app/recommendations', label: 'Recommendations', icon: Target },
     { path: '/app/zones', label: 'Zones', icon: Map },
-    { path: '/app/ecology', label: 'Ecology', icon: Leaf },
     { path: '/app/history', label: 'History', icon: Clock },
   ];
 
@@ -61,10 +59,7 @@ export function RootLayout() {
               </button>
 
               {/* Live indicator */}
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium tracking-wide text-muted-foreground">LIVE</span>
-              </div>
+              
             </div>
           </div>
         </div>

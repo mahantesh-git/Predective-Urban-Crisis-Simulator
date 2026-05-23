@@ -9,7 +9,23 @@ const api = axios.create({
   },
 });
 
-// Mock data generators for when backend is offline
+
+const getMockLabels = (days: number, startOffset = 0) => {
+  return Array.from({ length: days }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() + i + startOffset);
+    return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+  });
+};
+
+const getMockForecastLabels = () => {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() + i + 1);
+    return `Day ${i + 1} (${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+  });
+};
+
 export const mockStatus = {
   risk_score: 0.78,
   crisis_level: 'HIGH',
@@ -35,7 +51,7 @@ export const mockStatus = {
 
 export const mockForecast = {
   mode: 'mock',
-  labels: ['Day 1 (Feb 24)', 'Day 2 (Feb 25)', 'Day 3 (Feb 26)', 'Day 4 (Feb 27)', 'Day 5 (Feb 28)', 'Day 6 (Mar 1)', 'Day 7 (Mar 2)'],
+  labels: getMockForecastLabels(),
   aqi_forecast: [178, 185, 192, 188, 175, 165, 158],
   water_stress_forecast: [0.72, 0.75, 0.78, 0.76, 0.73, 0.70, 0.68],
   confidence_bands: {
@@ -46,6 +62,21 @@ export const mockForecast = {
   time_to_impact_days: '2 days (Simulated)',
   affected_zones: ['Downtown Core', 'Industrial District'],
   recommended_policies: ['Mandatory face masks', 'Halt construction'],
+  explainable_ai: {
+    model_confidence_pct: 88.5,
+    shap_contributions: {
+      aqi: [
+        { feature: 'Traffic Density', impact: 18.4 },
+        { feature: 'Industrial Emissions', impact: 15.2 },
+        { feature: 'Wind Speed', impact: -12.3 }
+      ],
+      water_stress: [
+        { feature: 'Industrial Effluent', impact: 24.1 },
+        { feature: 'Recent Rainfall', impact: -15.8 },
+        { feature: 'Water Treatment', impact: -8.3 }
+      ]
+    }
+  },
 };
 
 export const mockRecommendations = {
@@ -162,7 +193,7 @@ export const mockZones = {
 };
 
 export const mockHistory = {
-  labels: ['Feb 17', 'Feb 18', 'Feb 19', 'Feb 20', 'Feb 21', 'Feb 22', 'Feb 23'],
+  labels: getMockLabels(7, -6), // Last 7 days including today
   aqi_trend: [145, 152, 158, 165, 170, 175, 178],
   water_quality_trend: [0.55, 0.58, 0.62, 0.66, 0.68, 0.70, 0.72],
   traffic_trend: [0.45, 0.48, 0.52, 0.58, 0.61, 0.63, 0.65],
@@ -172,9 +203,6 @@ export const mockHistory = {
   trend: 'WORSENING',
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// API functions — with backend response transformation to frontend interfaces
-// ─────────────────────────────────────────────────────────────────────────────
 
 export const getStatus = async (cityId?: string) => {
   try {
@@ -186,13 +214,10 @@ export const getStatus = async (cityId?: string) => {
     return {
       risk_score: d.risk_score,
       crisis_level: d.crisis_level,
-      confidence_interval: d.confidence_interval,
-      time_to_impact: d.time_to_impact,
       triggered_systems: d.triggered_systems || [],
       cascade_effects: {
-        // cascade aqi_risk is already 0-1 normalized; use it as display value too
         aqi_impact: d.cascade_effects?.aqi_risk != null
-          ? Math.round(d.cascade_effects.aqi_risk * d.latest_data?.aqi)  // scale to AQI-like value
+          ? Math.round(d.cascade_effects.aqi_risk * d.latest_data?.aqi)
           : (d.cascade_effects?.aqi_impact ?? d.latest_data?.aqi ?? 0),
         water_stress: d.cascade_effects?.water_risk ?? d.cascade_effects?.water_stress ?? 0,
         health_risk: d.cascade_effects?.health_risk ?? 0,
@@ -200,11 +225,8 @@ export const getStatus = async (cityId?: string) => {
       },
       latest_data: {
         aqi: d.latest_data?.aqi ?? 0,
-        // backend traffic is 0-100, frontend expects 0-1 ratio
         traffic_index: ((d.latest_data?.traffic ?? d.latest_data?.traffic_index ?? 0) / 100),
-        // backend water_quality is 0-100, frontend expects 0-1
         water_quality: ((d.latest_data?.water_quality ?? 0) / 100),
-        // backend industry_emission is 0-100 index, scale to kg/h equivalent (×3 for realistic display)
         industrial_emissions: Math.round((d.latest_data?.industry_emission ?? d.latest_data?.industrial_emissions ?? 0) * 3),
       },
     };
@@ -241,6 +263,7 @@ export const getForecast = async (days: number = 7, cityId?: string) => {
       time_to_impact_days: d.time_to_impact_days,
       affected_zones: d.affected_zones,
       recommended_policies: d.recommended_policies,
+      explainable_ai: d.explainable_ai,
     };
   } catch (error) {
     console.warn('Backend offline or error, using mock forecast:', error);
@@ -287,12 +310,16 @@ export const getRecommendations = async (cityId?: string) => {
     }));
 
     return {
-      baseline_risk: d.baseline_risk,
+      ...d,
       strategies,
     };
   } catch (error) {
     console.warn('Backend offline or error, using mock recommendations:', error);
-    return mockRecommendations;
+    return {
+      ...mockRecommendations,
+      crisis_level: 'HIGH',
+      triggered_systems: ['HEALTH', 'WATER', 'AIR_QUALITY'],
+    };
   }
 };
 
@@ -383,6 +410,7 @@ export const simulate = async (params: {
   heatwaveLevel: number;
   waterConservation: number;
   greenSpaceExpansion: number;
+  cityId?: string;
 }) => {
   try {
     const response = await api.post('/simulate', params);
@@ -393,11 +421,11 @@ export const simulate = async (params: {
       ...node,
       cascade_effects: {
         aqi_impact: node.cascade_effects?.aqi_risk != null
-          ? Math.round(node.cascade_effects.aqi_risk * (d.adjusted_data?.aqi || 178))
-          : (node.cascade_effects?.aqi_impact ?? 0),
-        water_stress: node.cascade_effects?.water_risk ?? node.cascade_effects?.water_stress ?? 0,
-        health_risk: node.cascade_effects?.health_risk ?? 0,
-        traffic_disruption: node.cascade_effects?.traffic_risk ?? node.cascade_effects?.traffic_disruption ?? 0,
+          ? Math.max(0, Math.round(node.cascade_effects.aqi_risk * (d.adjusted_data?.aqi || 178)))
+          : Math.max(0, (node.cascade_effects?.aqi_impact ?? 0)),
+        water_stress: Math.max(0, node.cascade_effects?.water_risk ?? node.cascade_effects?.water_stress ?? 0),
+        health_risk: Math.max(0, node.cascade_effects?.health_risk ?? 0),
+        traffic_disruption: Math.max(0, node.cascade_effects?.traffic_risk ?? node.cascade_effects?.traffic_disruption ?? 0),
       }
     });
 
@@ -425,10 +453,10 @@ export const simulate = async (params: {
         triggered_systems: newRisk > 0.7 ? ['HEALTH', 'AIR_QUALITY'] : newRisk > 0.5 ? ['AIR_QUALITY'] : [],
         time_to_impact: Math.round(14 * (1 - newRisk)),
         cascade_effects: {
-          aqi_impact: Math.round(178 * (1 - reduction)),
-          water_stress: Math.max(0.1, 0.72 - (params.waterConservation * 0.004)),
-          health_risk: Math.max(0.1, 0.85 - reduction),
-          traffic_disruption: Math.max(0.1, 0.65 - (params.trafficReduction * 0.006))
+          aqi_impact: Math.max(0, Math.round(178 * (1 - reduction))),
+          water_stress: Math.max(0, 0.72 - (params.waterConservation * 0.004)),
+          health_risk: Math.max(0, 0.85 - reduction),
+          traffic_disruption: Math.max(0, 0.65 - (params.trafficReduction * 0.006))
         }
       },
       delta: {
@@ -440,9 +468,9 @@ export const simulate = async (params: {
   }
 };
 
-export const compareScenarios = async (scenarios: any[]) => {
+export const compareScenarios = async (scenarios: any[], cityId?: string) => {
   try {
-    const response = await api.post('/simulate/compare', { scenarios });
+    const response = await api.post('/simulate/compare', { scenarios, cityId });
     return response.data;
   } catch (error) {
     console.warn('Backend offline, using mock data:', error);
@@ -461,70 +489,38 @@ export const compareScenarios = async (scenarios: any[]) => {
   }
 };
 
-// ── Deforestation API (goal15 data + India state deforestation) ───────────────
 
-export const getDeforestationNational = async () => {
-  try {
-    const response = await api.get('/deforestation/national');
-    return response.data;
-  } catch {
-    // Fallback: hardcoded from goal15_forest_shares.csv IND row
-    return {
-      source: 'fallback_goal15',
-      years: [2001, 2005, 2009, 2013, 2017, 2021, 2023],
-      total_forest_cover: [678333, 690899, 697898, 701673, 708273, 713789, 713789],
-      total_tree_loss: [42000, 48500, 52300, 58100, 62800, 65400, 68420],
-      total_reforestation: [35000, 38200, 42100, 45800, 48900, 51200, 52300],
-      total_net_change: [-7000, -10300, -10200, -12300, -13900, -14200, -16120],
-      avg_deforestation_rate: [0.12, 0.15, 0.16, 0.18, 0.19, 0.19, 0.198],
-      // Goal 15 metadata
-      goal15_forest_cover_2000_pct: 22.7,
-      goal15_forest_cover_2020_pct: 24.3,
-      goal15_trend_pct: 7.0,
-    };
-  }
-};
 
-export const getDeforestationRisk = async (year?: number) => {
+export const getHistoryRaw = async (cityId: string, days = 7) => {
   try {
-    const params = year ? { year } : {};
-    const response = await api.get('/deforestation/risk', { params });
+    const response = await api.get('/history', { params: { cityId, days } });
     return response.data;
-  } catch {
+  } catch (error) {
+    console.warn('History fetch failed, using mock data:', error);
+    // Generate simple mock history for the last 7 days
+    const labels: string[] = [];
+    const aqi: number[] = [];
+    const risk_scores: number[] = [];
+    const water_quality: number[] = [];
+    const traffic: number[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+      aqi.push(120 + Math.round(Math.random() * 80));
+      risk_scores.push(parseFloat((0.45 + Math.random() * 0.35).toFixed(3)));
+      water_quality.push(parseFloat((55 + Math.random() * 30).toFixed(1)));
+      traffic.push(parseFloat((35 + Math.random() * 40).toFixed(1)));
+    }
     return {
-      source: 'fallback',
-      scores: [
-        { state: 'Jharkhand', risk_score: 78.2, risk_level: 'Critical', deforestation_rate_pct: 0.45, forest_cover_pct: 29.6, confidence: [75, 82] },
-        { state: 'Assam', risk_score: 71.5, risk_level: 'Critical', deforestation_rate_pct: 0.38, forest_cover_pct: 34.2, confidence: [68, 74] },
-        { state: 'Madhya Pradesh', risk_score: 62.4, risk_level: 'High', deforestation_rate_pct: 0.28, forest_cover_pct: 25.1, confidence: [59, 65] },
-        { state: 'Maharashtra', risk_score: 55.8, risk_level: 'High', deforestation_rate_pct: 0.22, forest_cover_pct: 16.5, confidence: [52, 59] },
-        { state: 'Karnataka', risk_score: 48.3, risk_level: 'Moderate', deforestation_rate_pct: 0.18, forest_cover_pct: 20.1, confidence: [45, 51] },
-        { state: 'Odisha', risk_score: 44.1, risk_level: 'Moderate', deforestation_rate_pct: 0.15, forest_cover_pct: 33.2, confidence: [41, 47] },
-        { state: 'Rajasthan', risk_score: 38.7, risk_level: 'Moderate', deforestation_rate_pct: 0.12, forest_cover_pct: 4.9, confidence: [35, 42] },
-        { state: 'Kerala', risk_score: 25.2, risk_level: 'Low', deforestation_rate_pct: 0.06, forest_cover_pct: 54.4, confidence: [22, 28] },
-      ],
-    };
-  }
-};
-
-export const getDeforestationOverview = async () => {
-  try {
-    const response = await api.get('/deforestation/overview');
-    return response.data;
-  } catch {
-    return {
-      year_range: [2001, 2023],
-      total_states: 28,
-      goal15_india_trend_pct: 7.0,
-      goal15_world_trend_pct: -2.2,
-      latest_year_summary: {
-        year: 2023,
-        total_forest_cover_sq_km: 713789,
-        avg_forest_cover_pct: 21.7,
-        avg_deforestation_rate_pct: 0.198,
-      },
+      success: true,
+      days: 7,
+      trend_direction: 'STABLE',
+      chart_data: { labels, aqi, risk_scores, water_quality, traffic },
+      summary: { avg_aqi: 160, avg_risk: 0.62, peak_risk_day: labels[3] },
     };
   }
 };
 
 export default api;
+

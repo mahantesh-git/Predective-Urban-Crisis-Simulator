@@ -44,18 +44,6 @@ class HealthPredictionRequest(BaseModel):
 class HealthPredictionResponse(BaseModel):
     risk_level: str
 
-# ── FOREST ─────────────────────────────────────────────────────
-class ForestPredictionRequest(BaseModel):
-    rainfall: float
-    urban_expansion_rate: float
-    forest_cover_ha: float
-    population_density: float
-    avg_rainfall: float
-    workforce_ratio: float
-
-class ForestPredictionResponse(BaseModel):
-    predicted_forest_loss: float
-
 # ── TRAFFIC ────────────────────────────────────────────────────
 class TrafficPredictionRequest(BaseModel):
     time_of_day: int = Field(..., description="Hour of the day 0-23")

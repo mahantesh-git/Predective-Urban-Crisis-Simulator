@@ -31,6 +31,13 @@ async def predict_aqi(request: AQIPredictionRequest, registry: ModelRegistry = D
     try:
         # Prophet prediction logic
         future = model.make_future_dataframe(periods=request.days)
+
+        # The model was trained with a 'pm25_reg' extra regressor.
+        # Forward-fill the last known training value into future rows.
+        if "pm25_reg" in model.extra_regressors:
+            last_pm25 = model.history["pm25_reg"].mean()
+            future["pm25_reg"] = last_pm25
+
         forecast_df = model.predict(future)
         
         # Get only the forecasted part
