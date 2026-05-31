@@ -67,12 +67,8 @@ export function IndiaMapSelector({ isOpen, onClose }: IndiaMapSelectorProps) {
         setHovered(c);
     };
 
-    // Risk color based on city baseAqi
-    const getDotColor = (c: CityProfile) => {
-        if (c.baseAqi >= 150) return '#ef4444'; // red — critical
-        if (c.baseAqi >= 100) return '#f97316'; // orange — high
-        if (c.baseAqi >= 60) return '#eab308'; // yellow — moderate
-        return '#22c55e'; // green — low
+    const getDotColor = (isActive: boolean) => {
+        return isActive ? '#ea580c' : '#94a3b8'; // rust for active, slate for inactive
     };
 
     return (
@@ -111,12 +107,7 @@ export function IndiaMapSelector({ isOpen, onClose }: IndiaMapSelectorProps) {
                         <div className="flex gap-0">
                             {/* India Map */}
                             <div className="flex-1 p-4 relative bg-muted/20">
-                                <div className="text-[10px] text-muted-foreground mb-2 flex items-center gap-4">
-                                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" />Critical</span>
-                                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500 inline-block" />High</span>
-                                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-500 inline-block" />Moderate</span>
-                                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" />Low</span>
-                                </div>
+
                                 <svg
                                     viewBox="0 0 400 500"
                                     className="w-full max-h-[400px]"
@@ -134,7 +125,7 @@ export function IndiaMapSelector({ isOpen, onClose }: IndiaMapSelectorProps) {
                                     {allCities.map((c) => {
                                         const { x, y } = geoToSVG(c.lat, c.lng);
                                         const isActive = c.id === city.id;
-                                        const color = getDotColor(c);
+                                        const color = getDotColor(isActive);
 
                                         return (
                                             <g key={c.id} style={{ cursor: 'pointer' }} onClick={() => handleSelect(c)}>
@@ -198,7 +189,7 @@ export function IndiaMapSelector({ isOpen, onClose }: IndiaMapSelectorProps) {
                                 </div>
                                 {allCities.map((c) => {
                                     const isActive = c.id === city.id;
-                                    const color = getDotColor(c);
+                                    const color = getDotColor(isActive);
                                     return (
                                         <button
                                             key={c.id}

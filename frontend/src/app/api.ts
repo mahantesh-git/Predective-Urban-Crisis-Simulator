@@ -328,8 +328,6 @@ export const getZones = async (cityId?: string) => {
     const response = await api.get('/zones', { params: { cityId } });
     const d = response.data;
     if (!d || d.success === false || d.error) throw new Error('Backend error');
-
-    // Transform backend zones[] to match frontend interface (zone_id, population, alert_level)
     const zones = (d.zones || []).map((z: any) => ({
       zone_id: z.id ?? z.zone_id,
       name: z.name,
@@ -360,8 +358,6 @@ export const getZoneDetail = async (zoneId: string, cityId?: string) => {
     const d = response.data;
     if (!d || d.success === false || d.error) throw new Error('Backend error');
 
-    // Backend: { zone, forecast: [{date, risk_score, ...}] }
-    // Frontend: { zone_id, forecast_7day: number[], labels: string[] }
     const forecast = d.forecast || [];
     return {
       zone_id: zoneId,
@@ -473,7 +469,7 @@ export const compareScenarios = async (scenarios: any[], cityId?: string) => {
     const response = await api.post('/simulate/compare', { scenarios, cityId });
     return response.data;
   } catch (error) {
-    console.warn('Backend offline, using mock data:', error);
+    console.warn('Backend offline', error);
     return {
       comparison: scenarios.map((scenario) => {
         const reduction = (scenario.trafficReduction * 0.003 + scenario.industrialCut * 0.004) - (scenario.heatwaveLevel * 0.05);

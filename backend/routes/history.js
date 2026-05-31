@@ -4,48 +4,14 @@ const router = express.Router();
 const EnvironmentalData = require('../models/EnvironmentalData');
 const { computeRisk } = require('../engine/cascadeEngine');
 
-/**
- * GET /history
- * ─────────────────────────────────────────────────────────────────────────────
- * Returns the full 7-day historical trend formatted for frontend charts.
- * Computes per-day risk scores from stored environmental data.
- *
- * Response:
- * {
- *   success: true,
- *   days: 7,
- *   trend_direction: "WORSENING" | "IMPROVING" | "STABLE",
- *   chart_data: {
- *     labels:             string[],   ← e.g. ["Feb 17", "Feb 18", ...]
- *     aqi:                number[],
- *     traffic:            number[],
- *     water_quality:      number[],
- *     industry_emission:  number[],
- *     risk_scores:        number[],
- *     crisis_levels:      string[]
- *   },
- *   summary: {
- *     peak_risk_day:    string,
- *     peak_risk_score:  number,
- *     avg_risk:         number,
- *     avg_aqi:          number,
- *     avg_water_quality:number
- *   }
- * }
- */
 router.get('/', async (req, res, next) => {
     try {
         const limit = parseInt(req.query.days) || 7 ;
         const heatwaveLevel = parseFloat(req.query.heatwaveLevel) || 0;
         const cityId = req.query.cityId;
 
-        // Fallback: if no data for this city, use bengaluru as baseline
         let query = {};
         if (cityId) query.cityId = cityId;
-
-        // Use aggregation to group by day and get the latest reading per day
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
 
         const pipeline = [
             { $match: query },
@@ -82,14 +48,6 @@ router.get('/', async (req, res, next) => {
             });
         }
 
-        const getCrisisLevel = (score) => {
-            if (score < 0.30) return 'LOW';
-            if (score < 0.55) return 'MODERATE';
-            if (score < 0.75) return 'HIGH';
-            return 'CRITICAL';
-        };
-
-        // Build per-day chart arrays
         const labels = [];
         const aqi = [];
         const traffic = [];
@@ -97,10 +55,10 @@ router.get('/', async (req, res, next) => {
         const industry_emission = [];
         const risk_scores = [];
 
+        const UTC_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
         for (const rec of records) {
-            const dateStr = new Date(rec.date).toLocaleDateString('en-US', {
-                month: 'short', day: 'numeric',
-            });
+            const d = new Date(rec.date);
+            const dateStr = `${UTC_MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
             const riskResult = computeRisk(rec, heatwaveLevel);
 
             labels.push(dateStr);
@@ -111,7 +69,6 @@ router.get('/', async (req, res, next) => {
             risk_scores.push(Math.max(0, riskResult.risk_score));
         }
 
-        // ── Trend direction ────────────────────────────────────────────────────────
         const firstRisk = risk_scores[0];
         const lastRisk = risk_scores[risk_scores.length - 1];
         const delta = lastRisk - firstRisk;

@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List
 
-# ── AQI ────────────────────────────────────────────────────────
 class AQIPredictionRequest(BaseModel):
     days: int = Field(..., ge=1, le=365, description="Number of days to forecast")
 
@@ -14,7 +13,6 @@ class AQIForecastPoint(BaseModel):
 class AQIPredictionResponse(BaseModel):
     forecast: List[AQIForecastPoint]
 
-# ── WATER ──────────────────────────────────────────────────────
 class WaterPredictionRequest(BaseModel):
     days: int = Field(..., ge=1, le=365, description="Number of days to forecast")
 
@@ -27,7 +25,6 @@ class WaterForecastPoint(BaseModel):
 class WaterPredictionResponse(BaseModel):
     forecast: List[WaterForecastPoint]
 
-# ── HEALTH ─────────────────────────────────────────────────────
 class HealthPredictionRequest(BaseModel):
     aqi: float
     temperature: float
@@ -44,16 +41,12 @@ class HealthPredictionRequest(BaseModel):
 class HealthPredictionResponse(BaseModel):
     risk_level: str
 
-# ── TRAFFIC ────────────────────────────────────────────────────
 class TrafficPredictionRequest(BaseModel):
     time_of_day: int = Field(..., description="Hour of the day 0-23")
     day_of_week: int = Field(..., description="0=Monday, 6=Sunday")
     traffic_density: float
     temperature: float
-    population_density: float
-    household_density: float
-    month: int = 1
-    summer: int = 0
+    aqi: float = Field(100.0, ge=0, le=500, description="Air Quality Index (0–500)")
 
 class TrafficPredictionResponse(BaseModel):
     traffic_status: str

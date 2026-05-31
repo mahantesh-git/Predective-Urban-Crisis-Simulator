@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router';
 import { Activity, Zap, TrendingUp, Map, Clock, MapPin, ChevronDown } from 'lucide-react';
-import { WelcomeDialog } from './WelcomeDialog';
+
 import { AnimatePresence } from 'motion/react';
 import React from 'react';
 import { useCity } from '../context/CityContext';
@@ -23,7 +23,6 @@ export function RootLayout() {
 
   return (
     <div className="min-h-screen bg-background font-sans text-foreground flex flex-col">
-      <WelcomeDialog />
 
       {/* Satellite Map Modal */}
       <SatelliteMapSelector isOpen={mapOpen} onClose={() => setMapOpen(false)} />

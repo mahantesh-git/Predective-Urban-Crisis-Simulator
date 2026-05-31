@@ -107,10 +107,8 @@ export function Simulate() {
         cityId: city.id,
       } as any);
 
-      // Apply city multiplier for consistency with Dashboard
-      const m = city.riskMultiplier;
-      const rawBaseline = (data.baseline?.risk_score || 0) * m;
-      const rawResult = (data.result?.risk_score || 0) * m;
+      const rawBaseline = data.baseline?.risk_score || 0;
+      const rawResult = data.result?.risk_score || 0;
 
       // Re-derive triggered_systems from SCALED cascade values (same 0.60 threshold as backend)
       const CRISIS_THRESHOLD = 0.60;
@@ -118,10 +116,10 @@ export function Simulate() {
         const fx = node?.cascade_effects;
         if (!fx) return [];
         const systems: string[] = [];
-        const aqiRisk = Math.min((fx.aqi_impact || 0) / 500, 1) * m;
-        const waterRisk = Math.min((fx.water_stress || 0) * m, 1);
-        const healthRisk = Math.min((fx.health_risk || 0) * m, 1);
-        const trafficRisk = Math.min((fx.traffic_disruption || 0) * m, 1);
+        const aqiRisk = Math.min((fx.aqi_impact || 0) / 500, 1);
+        const waterRisk = Math.min(fx.water_stress || 0, 1);
+        const healthRisk = Math.min(fx.health_risk || 0, 1);
+        const trafficRisk = Math.min(fx.traffic_disruption || 0, 1);
         if (aqiRisk >= CRISIS_THRESHOLD) systems.push('AIR_QUALITY');
         if (waterRisk >= CRISIS_THRESHOLD) systems.push('WATER_SUPPLY');
         if (healthRisk >= CRISIS_THRESHOLD) systems.push('PUBLIC_HEALTH');
@@ -143,8 +141,8 @@ export function Simulate() {
           crisis_level: getLevel(Math.min(rawResult, 1)),
           triggered_systems: deriveTriggered(data.result),
           confidence_interval: data.result?.confidence_interval ? {
-            lower: Math.max(0, Math.min(1, data.result.confidence_interval.lower * m)),
-            upper: Math.max(0, Math.min(1, data.result.confidence_interval.upper * m)),
+            lower: Math.max(0, Math.min(1, data.result.confidence_interval.lower)),
+            upper: Math.max(0, Math.min(1, data.result.confidence_interval.upper)),
           } : undefined
         }
       };
@@ -170,13 +168,11 @@ export function Simulate() {
     try {
       const data = await compareScenarios(scenarios, city.id);
 
-      // Apply scaling to comparison results
-      const m = city.riskMultiplier;
       const scaledData = {
         ...data,
         comparison: data.comparison.map((row: any) => {
           // Store raw for internal logic if needed, but here we just need correct display levels
-          const scaledRisk = Math.min(row.risk_score * m, 1);
+          const scaledRisk = Math.min(row.risk_score, 1);
           return {
             ...row,
             risk_score: scaledRisk,

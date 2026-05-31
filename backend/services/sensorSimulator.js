@@ -11,7 +11,7 @@ const startSimulator = (app, intervalMs = 60000) => {
             if (!cities.length) return;
 
             const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            today.setUTCHours(0, 0, 0, 0);
 
             for (const cityId of cities) {
                 const latest = await EnvironmentalData.findOne({ cityId }).sort({ date: -1 });
@@ -65,11 +65,5 @@ const startSimulator = (app, intervalMs = 60000) => {
 
 };
 
-const getCrisisLevel = (score) => {
-    if (score < 0.30) return 'LOW';
-    if (score < 0.55) return 'MODERATE';
-    if (score < 0.75) return 'HIGH';
-    return 'CRITICAL';
-};
 
 module.exports = { startSimulator };

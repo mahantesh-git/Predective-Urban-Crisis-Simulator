@@ -1,14 +1,4 @@
-/**
- * Supported ML endpoints:
- *   POST /predict/aqi     — 7-day AQI forecast
- *   POST /predict/water   — 7-day water quality forecast
- *   POST /predict/health  — Health risk classification
- *   POST /predict/traffic — Traffic status classification
- *   GET  /health          — Health check
- */
-
 const ML_URL = () => process.env.ML_SERVICE_URL || 'http://localhost:8000';
-
 
 const callMLEndpoint = async (path, payload) => {
     const url = `${ML_URL()}${path}`;
@@ -41,7 +31,7 @@ const checkMLHealth = async () => {
         const response = await fetch(`${ML_URL()}/health`, { timeout: 3000 });
         return response.ok;
     } catch {
-        return false;
+        return false;   
     }
 };
 

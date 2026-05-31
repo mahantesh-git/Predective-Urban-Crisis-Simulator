@@ -1,18 +1,5 @@
 const { runSimulation } = require('./simulationEngine');
 
-/**
- * Recommendation Engine
- * ─────────────────────────────────────────────────────────────────────────────
- * Algorithm:
- *  1. Get baseline risk from current environmental data
- *  2. For each driver (traffic, industry, water, heatwave), simulate a
- *     20% / 30% / 50% reduction scenario
- *  3. Calculate the delta risk reduction (efficiency)
- *  4. Rank all interventions by efficiency (highest delta first)
- *  5. Return a ranked list with impact estimates
- */
-
-// Intervention definitions: name, driver to reduce, reduction magnitude
 const INTERVENTIONS = [
     {
         id: 'reduce_traffic_20',
@@ -59,13 +46,12 @@ const INTERVENTIONS = [
         name: 'Urban Heat Mitigation (Green Cover)',
         category: 'HEATWAVE',
         description: 'Urban greening and reflective surfaces to reduce effective heatwave severity.',
-        policy: { trafficReduction: 0, industrialCut: 0, heatwaveLevel: 0 }, // neutralize heatwave
+        policy: { trafficReduction: 0, industrialCut: 0, heatwaveLevel: 0 },
         cost_proxy: 'MEDIUM',
         heatwave_override: true,
     },
 ];
 
-// Cost multiplier for efficiency scoring (lower cost = better efficiency score)
 const COST_WEIGHTS = { LOW: 1.5, MEDIUM: 1.0, HIGH: 0.7 };
 
 /**
@@ -80,18 +66,15 @@ const generateRecommendations = (baselineData, currentRisk, currentHeatwave = 0)
     const scoredInterventions = INTERVENTIONS.map((intervention) => {
         const policy = { ...intervention.policy };
 
-        // For heatwave override interventions, force heatwaveLevel to 0
         if (intervention.heatwave_override) {
             policy.heatwaveLevel = 0;
         } else {
             policy.heatwaveLevel = currentHeatwave;
         }
 
-        // Run simulation with this policy applied
         const simResult = runSimulation(baselineData, policy);
         const newRisk = simResult.risk_score;
 
-        // Efficiency = risk reduced / cost factor
         const riskDelta = parseFloat((currentRisk - newRisk).toFixed(4));
         const costWeight = COST_WEIGHTS[intervention.cost_proxy] || 1.0;
         const efficiency = parseFloat((riskDelta * costWeight).toFixed(4));
@@ -113,10 +96,8 @@ const generateRecommendations = (baselineData, currentRisk, currentHeatwave = 0)
         };
     });
 
-    // Sort by efficiency (highest first)
     scoredInterventions.sort((a, b) => b.efficiency_score - a.efficiency_score);
 
-    // Add rank
     return scoredInterventions.map((item, idx) => ({
         rank: idx + 1,
         ...item,

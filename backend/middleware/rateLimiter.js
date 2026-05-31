@@ -1,14 +1,5 @@
 const rateLimit = require('express-rate-limit');
 
-/**
- * Rate Limiters
- * ─────────────────────────────────────────────────────────────────────────────
- * Three tiers:
- *  - global      : 200 req / 15 min per IP (all routes)
- *  - simulation  : 30 req / 15 min per IP (compute-heavy)
- *  - data ingest : 60 req / 15 min per IP (POST /data)
- */
-
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,  // 15 minutes
     max: 200,
@@ -31,15 +22,4 @@ const simulationLimiter = rateLimit({
     },
 });
 
-const dataIngestLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 60,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-        success: false,
-        error: 'Data ingestion rate limit exceeded (60 per 15min). Please wait.',
-    },
-});
-
-module.exports = { globalLimiter, simulationLimiter, dataIngestLimiter };
+module.exports = { globalLimiter, simulationLimiter };

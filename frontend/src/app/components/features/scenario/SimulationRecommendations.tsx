@@ -8,8 +8,6 @@ import {
   ShieldCheck, AlertTriangle,
 } from 'lucide-react';
 
-// ── Types (mirrored from Recommendations.tsx) ─────────────────────────────────
-
 interface CascadeImpact {
   aqi_risk?: number;
   water_risk?: number;
@@ -42,13 +40,11 @@ interface RecommendationsData {
 
 interface SimulationRecommendationsProps {
   cityId: string;
-  /** Pass the post-simulation risk score so recommendations reflect actual results */
   simulatedRiskScore: number;
   simulatedCrisisLevel: string;
   triggeredSystems: string[];
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const CATEGORY_META: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   TRAFFIC:  { label: 'Traffic',  color: 'bg-purple-500/15 text-purple-400 border-purple-400/30', icon: Car },
@@ -98,13 +94,10 @@ function buildExplainability(strategy: Strategy): string[] {
     : [`This strategy reduces overall urban crisis risk by ${(strategy.risk_reduction * 100).toFixed(1)} percentage points.`];
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
 
 export function SimulationRecommendations({
   cityId,
   simulatedRiskScore,
-  simulatedCrisisLevel,
-  triggeredSystems,
 }: SimulationRecommendationsProps) {
   const [data, setData] = useState<RecommendationsData | null>(null);
   const [loading, setLoading] = useState(true);

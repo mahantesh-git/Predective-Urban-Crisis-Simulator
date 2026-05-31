@@ -6,29 +6,6 @@ const { computeRisk } = require('../engine/cascadeEngine');
 const { runSimulation } = require('../engine/simulationEngine');
 const { simulateValidationRules, validate } = require('../middleware/validator');
 
-/**
- * POST /simulate
- * ─────────────────────────────────────────────────────────────────────────────
- * Accepts policy parameters, applies them to the latest environmental data,
- * runs the cascade simulation, and returns the impact.
- *
- * Request body:
- * {
- *   trafficReduction : number (0–100)   optional, default 0
- *   industrialCut    : number (0–100)   optional, default 0
- *   heatwaveLevel    : number (0–5)     optional, default 0
- * }
- *
- * Response:
- * {
- *   success: true,
- *   baseline: { risk_score, cascade_effects },
- *   result:   { risk_score, cascade_effects, triggered_systems, time_to_impact },
- *   delta:    { risk_reduction, percentage_improvement },
- *   adjusted_data: { aqi, traffic, water_quality, industry_emission },
- *   policy_applied: { trafficReduction, industrialCut, heatwaveLevel },
- * }
- */
 router.post('/', simulateValidationRules, validate, async (req, res, next) => {
     try {
         const {
@@ -40,7 +17,6 @@ router.post('/', simulateValidationRules, validate, async (req, res, next) => {
             cityId = 'bengaluru',
         } = req.body;
 
-        // Get the most recent environmental reading as baseline
         let baseline = await EnvironmentalData.findOne({ cityId }).sort({ date: -1 });
         if (!baseline) {
             baseline = await EnvironmentalData.findOne({ cityId: 'bengaluru' }).sort({ date: -1 });
@@ -100,7 +76,6 @@ router.post('/', simulateValidationRules, validate, async (req, res, next) => {
 });
 
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
 const getCrisisLevel = (score) => {
     if (score < 0.30) return 'LOW';
     if (score < 0.55) return 'MODERATE';
@@ -108,10 +83,7 @@ const getCrisisLevel = (score) => {
     return 'CRITICAL';
 };
 
-/**
- * POST /simulate/compare
- * Run up to 5 policy scenarios side-by-side, returns ranked comparison table.
- */
+
 router.post('/compare', async (req, res, next) => {
     try {
         const { scenarios, cityId = 'bengaluru' } = req.body;
@@ -122,7 +94,7 @@ router.post('/compare', async (req, res, next) => {
         if (scenarios.length > 5) {
             return res.status(400).json({ success: false, error: 'Maximum 5 scenarios per comparison.' });
         }
-        let baseline = await EnvironmentalData.findOne({ cityId }).sort({ date: -1 });
+        let baseline = await EnvironmentalData.findOne({cityId}).sort({ date: -1 });
         if (!baseline) {
             baseline = await EnvironmentalData.findOne({ cityId: 'bengaluru' }).sort({ date: -1 });
         }
@@ -130,7 +102,6 @@ router.post('/compare', async (req, res, next) => {
 
         const baselineRisk = computeRisk(baseline, 0);
         
-        // ML Integration
         const history = await EnvironmentalData.find({ cityId }).sort({ date: -1 }).limit(14).lean();
         history.reverse();
         const history_aqi = history.map(h => h.aqi);

@@ -61,14 +61,7 @@ async def generate_multi_horizon_forecast(req: MultiForecastRequest):
     registry = get_registry()
     aqi_model   = registry.aqi_model
     water_model = registry.water_model
-
-    strategy = "ENSEMBLE (Prophet + XGBoost)"
-    if days <= 7:
-        strategy = "XGBoost (High Volatility Short-Term)"
-    elif days > 30:
-        strategy = "Prophet (Long-Term Trend Analysis)"
-
-    # ── Real Prophet Forecasting ─────────────────────────────────────────────────
+    
     if aqi_model and water_model:
         try:
             logger.info(f"Running real Prophet forecast for {days} days...")

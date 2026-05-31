@@ -4,11 +4,6 @@ const router = express.Router();
 const EnvironmentalData = require('../models/EnvironmentalData');
 const { generateForecast } = require('../engine/forecastEngine');
 
-/**
- * GET /forecast
- * ─────────────────────────────────────────────────────────────────────────────
- * Returns a N-day AQI + water stress forecast with confidence bands.
- */
 router.get('/', async (req, res, next) => {
     try {
         const cityId = req.query.cityId || 'bengaluru';
@@ -62,10 +57,6 @@ router.get('/', async (req, res, next) => {
     }
 });
 
-/**
- * POST /forecast/scenario
- * Generates an ML forecast modified by a policy scenario.
- */
 router.post('/scenario', async (req, res, next) => {
     try {
         const { scenario_traffic_delta = 0, scenario_industry_delta = 0, days_ahead = 7 } = req.body;

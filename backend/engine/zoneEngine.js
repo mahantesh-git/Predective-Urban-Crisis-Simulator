@@ -181,10 +181,9 @@ const getCityZones = (cityId) => {
     } catch (e) {
         console.error('Error reading city_zones.json:', e);
     }
-    return ZONES; // Fallback to Bengaluru hardcoded
+    return ZONES;
 };
 
-// Alert thresholds per zone risk score
 const ZONE_ALERT_LEVELS = {
     SAFE: { max: 0.35, color: '#22c55e', label: 'SAFE' },
     WATCH: { max: 0.55, color: '#eab308', label: 'WATCH' },
@@ -192,10 +191,6 @@ const ZONE_ALERT_LEVELS = {
     CRITICAL: { max: 1.00, color: '#ef4444', label: 'CRITICAL' },
 };
 
-/**
- * Get alert level object for a given zone risk score.
- * @param {number} score - 0 to 1
- */
 const getAlertLevel = (score) => {
     if (score <= ZONE_ALERT_LEVELS.SAFE.max) return ZONE_ALERT_LEVELS.SAFE;
     if (score <= ZONE_ALERT_LEVELS.WATCH.max) return ZONE_ALERT_LEVELS.WATCH;
@@ -203,16 +198,8 @@ const getAlertLevel = (score) => {
     return ZONE_ALERT_LEVELS.CRITICAL;
 };
 
-/**
- * Compute per-zone risk scores from cascade engine output.
- *
- * @param {Object} cascadeEffects - { aqi_risk, water_risk, health_risk, traffic_risk }
- * @param {number} globalRisk     - Overall city risk_score
- * @param {string} cityId         - City ID to load zones for
- * @returns {Array} List of zone objects with computed risk data
- */
-const computeZoneRisks = (cascadeEffects, globalRisk, cityId = 'bengaluru') => {
-    const margin = parseFloat(process.env.CONFIDENCE_MARGIN || '0.15');
+
+const computeZoneRisks = (cascadeEffects, cityId = 'bengaluru') => {
     const targetZones = getCityZones(cityId);
 
     return targetZones.map((zone) => {
@@ -230,13 +217,6 @@ const computeZoneRisks = (cascadeEffects, globalRisk, cityId = 'bengaluru') => {
 
         const alert = getAlertLevel(risk_score);
 
-        // Zone-specific confidence interval (higher population = tighter interval)
-        const densityFactor = { HIGH: 0.10, MEDIUM: 0.13, LOW: 0.18 }[zone.population_density] || 0.15;
-        const confidence_interval = {
-            lower: parseFloat(Math.max(risk_score - densityFactor * risk_score, 0).toFixed(4)),
-            upper: parseFloat(Math.min(risk_score + densityFactor * risk_score, 1).toFixed(4)),
-        };
-
         // Top contributing system in this zone
         const contributions = {
             AQI: sensitivity.aqi_risk * (cascadeEffects.aqi_risk || 0),
@@ -248,7 +228,7 @@ const computeZoneRisks = (cascadeEffects, globalRisk, cityId = 'bengaluru') => {
             .sort((a, b) => b[1] - a[1])[0][0];
 
         // ── Enterprise Vulnerability Index calculation ─────────────────────
-        // VI_z = 0.30*P_z + 0.25*H_z^{-1} + 0.20*C_z + 0.15*I_z + 0.10*S_z
+        // VI_z = 0.30*P_z + 0.25*H_z^{-1} + 0.20*Hi_z + 0.15*I_z + 0.10*S_z
         const vulnerability_score = parseFloat((
             0.30 * (zone.pop_density_norm || 0) +
             0.25 * (zone.hospital_cap_inv || 0) +
@@ -264,16 +244,10 @@ const computeZoneRisks = (cascadeEffects, globalRisk, cityId = 'bengaluru') => {
         return {
             id: zone.id,
             name: zone.name,
-            type: zone.type,
             description: zone.description,
-            coordinates: zone.coordinates,
             population: zone.population ?? null,
-            population_density: zone.population_density,
-            critical_infrastructure: zone.critical_infrastructure,
             risk_score,
-            confidence_interval,
             alert_level: alert.label,
-            alert_color: alert.color,
             primary_threat,
             pop_density_norm: zone.pop_density_norm,
             hospital_cap_inv: zone.hospital_cap_inv,
@@ -282,7 +256,6 @@ const computeZoneRisks = (cascadeEffects, globalRisk, cityId = 'bengaluru') => {
             socioeconomic_sensitivity: zone.socioeconomic_sensitivity,
             vulnerability_score,
             vulnerability_label,
-            is_affected: risk_score > ZONE_ALERT_LEVELS.SAFE.max,
             evacuation_priority: risk_score >= ZONE_ALERT_LEVELS.WARNING.max,
         };
     });

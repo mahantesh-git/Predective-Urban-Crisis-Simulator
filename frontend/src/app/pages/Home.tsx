@@ -59,7 +59,7 @@ export function Home() {
                         transition={{ duration: 0.8, delay: 0.6 }}
                         className="mt-8 text-lg md:text-xl text-[#6B4A34] max-w-2xl mx-auto leading-relaxed font-light"
                     >
-                        {city.name} is on the edge. CitySentinel uses predictive Monte Carlo simulations and zone-level forecasting to reveal the layers of urban crisis before they strike.
+                        {city.name} is on the edge. CitySentinel uses predictive simulations and zone-level forecasting to reveal the layers of urban crisis before they strike.
                     </motion.p>
 
                 </div>

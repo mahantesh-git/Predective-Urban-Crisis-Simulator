@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { getStatus, getHistory, getHistoryRaw } from '../api';
+import { getStatus, getHistoryRaw } from '../api';
 import { WS_URL } from '../config';
-import { AlertTriangle, TrendingUp, Activity, BarChart2 } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import { PageTransition } from '../components/PageTransition';
 import { PageHeader } from '../components/PageHeader';
 import { Progress } from '../components/ui/progress';
@@ -51,18 +51,15 @@ export function Dashboard() {
     try {
       const data = await getStatus(city.id);
 
-      // Apply city-specific risk multipliers
-      const m = city.riskMultiplier;
-
       const rawRisk = data.risk_score || 0;
 
-      const scaledRisk = Math.min(rawRisk * m, 1);
+      const scaledRisk = Math.min(rawRisk, 1);
 
       const scaledCascade = {
-        aqi_impact: Math.max(0, Math.round(city.baseAqi + ((data.cascade_effects?.aqi_impact || 98) - 98) * m)),
-        water_stress: Math.min((data.cascade_effects?.water_stress || 0) * m, 1),
-        health_risk: Math.min((data.cascade_effects?.health_risk || 0) * m, 1),
-        traffic_disruption: Math.min((data.cascade_effects?.traffic_disruption || 0) * m, 1),
+        aqi_impact: Math.max(0, Math.round(city.baseAqi + ((data.cascade_effects?.aqi_impact || 98) - 98))),
+        water_stress: Math.min(data.cascade_effects?.water_stress || 0, 1),
+        health_risk: Math.min(data.cascade_effects?.health_risk || 0, 1),
+        traffic_disruption: Math.min(data.cascade_effects?.traffic_disruption || 0, 1),
       };
 
       // Re-derive triggered_systems from the SCALED cascade values using the
@@ -83,7 +80,7 @@ export function Dashboard() {
         triggered_systems,
         latest_data: {
           ...data.latest_data,
-          aqi: Math.max(0, Math.round(city.baseAqi + ((data.latest_data?.aqi || 98) - 98) * m)),
+          aqi: Math.max(0, Math.round(city.baseAqi + ((data.latest_data?.aqi || 98) - 98))),
         }
       };
 
@@ -112,11 +109,10 @@ export function Dashboard() {
           water_quality: number[];
           traffic: number[];
         };
-        const m = city.riskMultiplier ?? 1.0;
         const points: HistoryChartPoint[] = labels.map((label: string, i: number) => ({
           label,
           aqi: Math.max(0, aqi[i] ?? 0),
-          risk_pct: Math.max(0, parseFloat(((risk_scores[i] ?? 0) * m * 100).toFixed(1))),
+          risk_pct: Math.max(0, parseFloat(((risk_scores[i] ?? 0) * 100).toFixed(1))),
           water_quality: Math.max(0, parseFloat((water_quality[i] ?? 0).toFixed(1))),
           traffic: Math.max(0, parseFloat((traffic[i] ?? 0).toFixed(1))),
         }));
@@ -329,8 +325,7 @@ export function Dashboard() {
         {/* Triggered Systems & Latest Data */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="bg-card border-border p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-destructive" />
+            <h3 className="text-lg font-semibold text-card-foreground mb-4">
               Triggered Alert Systems
             </h3>
             <div className="flex flex-wrap gap-3">
@@ -350,7 +345,6 @@ export function Dashboard() {
 
           <Card className="bg-card border-border p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" />
               Latest Sensor Readings
             </h3>
             <div className="grid grid-cols-2 gap-6">
@@ -378,15 +372,14 @@ export function Dashboard() {
         <Card className="bg-card border-border p-6 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-card-foreground flex items-center gap-2">
-              <BarChart2 className="w-5 h-5 text-primary" />
               7-Day Urban Crisis Trend
             </h3>
             <div className="flex items-center gap-3">
               <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${trendDirection === 'WORSENING'
-                  ? 'bg-destructive/10 text-destructive'
-                  : trendDirection === 'IMPROVING'
-                    ? 'bg-green-500/10 text-green-600'
-                    : 'bg-muted text-muted-foreground'
+                ? 'bg-destructive/10 text-destructive'
+                : trendDirection === 'IMPROVING'
+                  ? 'bg-green-500/10 text-green-600'
+                  : 'bg-muted text-muted-foreground'
                 }`}>
                 {trendDirection}
               </span>

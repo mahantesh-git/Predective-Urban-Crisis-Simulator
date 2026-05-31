@@ -40,33 +40,7 @@ const CITY_MAP = {
     'Visakhapatnam': 'visakhapatnam',
 };
 
-// Fallback base multipliers per city for derived metrics
-const RISK_MULTIPLIERS = {
-    'delhi': 1.35,
-    'gurugram': 1.30,
-    'talcher': 1.22,
-    'patna': 1.18,
-    'kolkata': 1.20,
-    'amritsar': 1.05,
-    'lucknow': 1.05,
-    'mumbai': 1.15,
-    'ahmedabad': 1.10,
-    'bengaluru': 1.00,
-    'bhopal': 0.95,
-    'hyderabad': 0.95,
-    'nagpur': 0.90,
-    'jodhpur': 0.88,
-    'chennai': 0.88,
-    'jaipur': 0.92,
-    'visakhapatnam': 0.98,
-    'amaravati': 0.75,
-    'coimbatore': 0.78,
-    'ernakulam': 0.70,
-    'thiruvananthapuram': 0.72,
-    'aizawl': 0.60,
-    'shillong': 0.65,
-    'pune': 0.82,
-};
+
 
 /**
  * Parse the CSV file manually (lightweight, no external deps).
@@ -88,16 +62,14 @@ function parseCSV(filePath) {
  * These are realistic approximations based on environmental literature correlations.
  */
 function deriveMetrics(aqi, cityId, dateStr) {
-    const mult = RISK_MULTIPLIERS[cityId] || 1.0;
-
     // Traffic correlates with AQI (normalized 0-100)
-    const traffic = Math.min(100, Math.max(0, (aqi / 500) * 100 * mult + (Math.random() * 10 - 5)));
+    const traffic = Math.min(100, Math.max(0, (aqi / 500) * 100 + (Math.random() * 10 - 5)));
 
     // Water quality inversely correlates with AQI and population pressure
-    const water_quality = Math.max(5, Math.min(100, 90 - (aqi / 10) * mult - (Math.random() * 5)));
+    const water_quality = Math.max(5, Math.min(100, 90 - (aqi / 10) - (Math.random() * 5)));
 
     // Industry emission correlates strongly with AQI
-    const industry_emission = Math.min(100, Math.max(0, (aqi / 500) * 80 * mult + (Math.random() * 8)));
+    const industry_emission = Math.min(100, Math.max(0, (aqi / 500) * 80 + (Math.random() * 8)));
 
     // Temperature: estimate from month and city
     const month = new Date(dateStr).getMonth(); // 0-11
@@ -160,12 +132,21 @@ const seed = async () => {
         entries.sort((a, b) => new Date(a.dateStr) - new Date(b.dateStr));
         const recent = entries.slice(-90);
 
-        const docs = recent.map(({ dateStr, aqiVal }) => ({
-            date: new Date(dateStr),
-            cityId,
-            aqi: Math.round(aqiVal),
-            ...deriveMetrics(aqiVal, cityId, dateStr),
-        }));
+        // Shift dates so the most recent record is today UTC midnight
+        const todayUTC = new Date();
+        todayUTC.setUTCHours(0, 0, 0, 0);
+
+        const docs = recent.map(({ dateStr, aqiVal }, i) => {
+            const date = new Date(todayUTC);
+            date.setUTCDate(date.getUTCDate() - (recent.length - 1 - i));
+            
+            return {
+                date: date,
+                cityId,
+                aqi: Math.round(aqiVal),
+                ...deriveMetrics(aqiVal, cityId, date.toISOString()),
+            };
+        });
 
         try {
             await EnvironmentalData.insertMany(docs, { ordered: false });
@@ -183,12 +164,12 @@ const seed = async () => {
     for (const cityId of [...new Set(allAppCities)]) {
         if (seededCities.has(cityId)) continue;
         // generate 7 days of fallback data
-        const mult = RISK_MULTIPLIERS[cityId] || 1.0;
-        const baseAqi = Math.round(100 * mult);
-        const today = new Date();
+        const baseAqi = 100;
+        const todayUTC = new Date();
+        todayUTC.setUTCHours(0, 0, 0, 0);
         const fallback = Array.from({ length: 7 }, (_, i) => {
-            const date = new Date(today);
-            date.setDate(today.getDate() - (6 - i));
+            const date = new Date(todayUTC);
+            date.setUTCDate(todayUTC.getUTCDate() - (6 - i));
             const aqi = baseAqi + Math.round((Math.random() - 0.5) * 30);
             return { date, cityId, aqi, ...deriveMetrics(aqi, cityId, date.toISOString()) };
         });

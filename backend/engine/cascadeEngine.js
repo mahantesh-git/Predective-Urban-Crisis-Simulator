@@ -15,7 +15,7 @@ const ADJACENCY_MATRIX = {
     'AQI': { 'HEALTH': 0.70 },
     'WATER': { 'HEALTH': 0.40 },
     'HEATWAVE': { 'AQI': 0.30, 'HEALTH': 0.50 },
-    'HEALTH': {} 
+    'HEALTH': {}
 };
 
 const DAMPING_FACTOR = 0.8;
@@ -99,7 +99,7 @@ const runCascade = (normalized, heatwaveLevel = 0) => {
     if (traffic_risk >= CRISIS_THRESHOLD) triggered_systems.push('TRAFFIC_NETWORK');
 
     // ── Layer 5: Time-to-Impact estimate ───────────────────────────────────────
-    const time_to_impact = risk_score > 0 ? Math.max(Math.round((CRISIS_THRESHOLD - risk_score) / 0.05), 0): null;
+    const time_to_impact = risk_score > 0 ? Math.max(Math.round((CRISIS_THRESHOLD - risk_score) / 0.05), 0) : null;
 
     return {
         risk_score: parseFloat(risk_score.toFixed(4)),

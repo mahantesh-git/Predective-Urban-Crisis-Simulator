@@ -3,7 +3,7 @@ const router = express.Router();
 
 const EnvironmentalData = require('../models/EnvironmentalData');
 const { computeRisk } = require('../engine/cascadeEngine');
-const { computeZoneRisks, generateZoneForecast } = require('../engine/zoneEngine');
+const { computeZoneRisks, generateZoneForecast, getCityZones } = require('../engine/zoneEngine');
 
 /**
  * GET /zones
@@ -42,7 +42,7 @@ router.get('/', async (req, res, next) => {
         if (!latest) {
             return res.status(404).json({
                 success: false,
-                error: 'No environmental data found. Please run `npm run seed` first.',
+                error: 'No environmental data found.',
             });
         }
 
@@ -56,16 +56,6 @@ router.get('/', async (req, res, next) => {
 
         // Sort by risk (highest first) for prioritized response
         zones.sort((a, b) => b.risk_score - a.risk_score);
-
-        const affectedZones = zones.filter((z) => z.is_affected);
-        const evacuationZones = zones.filter((z) => z.evacuation_priority);
-
-        const getCrisisLevel = (score) => {
-            if (score < 0.30) return 'LOW';
-            if (score < 0.55) return 'MODERATE';
-            if (score < 0.75) return 'HIGH';
-            return 'CRITICAL';
-        };
 
         const response = {
             success: true,
@@ -91,7 +81,6 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
     try {
         const heatwaveLevel = parseFloat(req.query.heatwaveLevel) || 0;
-        const { getCityZones } = require('../engine/zoneEngine');
         const cityId = req.query.cityId || 'bengaluru';
         const cityZones = getCityZones(cityId);
 
@@ -114,7 +103,6 @@ router.get('/:id', async (req, res, next) => {
 
         // 7-day forecast always included for single zone
         const historicalData = await EnvironmentalData.find({ cityId }).sort({ date: 1 });
-        const { generateZoneForecast } = require('../engine/zoneEngine');
         const forecast = generateZoneForecast([zoneData], historicalData, cityId);
 
         res.json({

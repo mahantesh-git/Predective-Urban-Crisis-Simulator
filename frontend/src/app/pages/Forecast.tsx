@@ -62,12 +62,10 @@ export function Forecast() {
         getStatus(city.id),
       ]);
 
-      const m = city.riskMultiplier;
-
       // Current real AQI — same calculation used in Dashboard.tsx.
       const liveAqi = Math.max(
         0,
-        Math.round(city.baseAqi + ((statusData?.latest_data?.aqi || city.baseAqi) - city.baseAqi) * m)
+        Math.round(city.baseAqi + ((statusData?.latest_data?.aqi || city.baseAqi) - city.baseAqi))
       );
       setCurrentAqi(liveAqi);
 
@@ -80,8 +78,8 @@ export function Forecast() {
         : city.baseAqi;
 
       // scaleAqi: preserve Prophet's trend shape, anchored to the live current AQI.
-      const scaleAqi = (v: number) => Math.max(0, Math.round(liveAqi + (v - prophetMean) * m));
-      const scaleWater = (v: number) => Math.max(0, Math.min(v * m, 1));
+      const scaleAqi = (v: number) => Math.max(0, Math.round(liveAqi + (v - prophetMean)));
+      const scaleWater = (v: number) => Math.max(0, Math.min(v, 1));
 
       const scaled: ForecastData = {
         ...raw,
@@ -326,7 +324,7 @@ export function Forecast() {
                 <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Forecast Window</p>
                 <p className="text-2xl font-bold text-green-600 mt-2">{selectedDays} days</p>
                 <p className="text-xs font-medium text-muted-foreground mt-1">
-                  {city.name} · Risk ×{city.riskMultiplier.toFixed(2)}
+                  {city.name}
                 </p>
               </Card>
             </div>

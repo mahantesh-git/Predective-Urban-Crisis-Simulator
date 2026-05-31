@@ -4,19 +4,8 @@ import { X } from 'lucide-react';
 import { useCity } from '../context/CityContext';
 import { CityProfile } from '../data/cities';
 
-// Risk color based on city baseAqi
-function getDotColor(c: CityProfile) {
-    if (c.baseAqi >= 150) return '#ef4444'; // red — critical
-    if (c.baseAqi >= 100) return '#f97316'; // orange — high
-    if (c.baseAqi >= 60) return '#eab308'; // yellow — moderate
-    return '#22c55e'; // green — low
-}
-
-function getRiskLabel(c: CityProfile) {
-    if (c.baseAqi >= 150) return 'CRITICAL';
-    if (c.baseAqi >= 100) return 'HIGH';
-    if (c.baseAqi >= 60) return 'MODERATE';
-    return 'LOW';
+function getDotColor(isActive: boolean) {
+    return isActive ? '#ea580c' : '#94a3b8';
 }
 
 interface SatelliteMapSelectorProps {
@@ -112,8 +101,7 @@ export function SatelliteMapSelector({ isOpen, onClose }: SatelliteMapSelectorPr
     ) {
         cities.forEach((c) => {
             const isActive = c.id === activeCityId;
-            const color = getDotColor(c);
-            const riskLabel = getRiskLabel(c);
+            const color = getDotColor(isActive);
             const size = isActive ? 20 : 14;
 
             const icon = L.divIcon({
@@ -146,11 +134,6 @@ export function SatelliteMapSelector({ isOpen, onClose }: SatelliteMapSelectorPr
                             background:${color};display:inline-block;flex-shrink:0;
                         "></span>
                         <strong style="font-size:14px;color:#1a1a1a;">${c.name}</strong>
-                        <span style="
-                            font-size:9px;background:${color}20;color:${color};
-                            padding:2px 6px;border-radius:999px;font-weight:700;
-                            border:1px solid ${color}40;
-                        ">${riskLabel}</span>
                     </div>
                     <p style="color:#666;font-size:11px;margin:0 0 4px;">${c.state} · ${c.population_millions}M pop.</p>
                     <p style="color:#888;font-size:10px;margin:0 0 8px;font-style:italic;">${c.tagline}</p>
@@ -208,13 +191,7 @@ export function SatelliteMapSelector({ isOpen, onClose }: SatelliteMapSelectorPr
                                 <p className="text-[10px] text-muted-foreground">Click a marker or use the list to select a city. Zoom and pan freely.</p>
                             </div>
 
-                            {/* Risk Legend */}
-                            <div className="hidden sm:flex items-center gap-4 text-[10px] text-muted-foreground mx-4">
-                                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block shadow-[0_0_6px_#ef4444]" />Critical</span>
-                                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block shadow-[0_0_6px_#f97316]" />High</span>
-                                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-yellow-500 inline-block shadow-[0_0_6px_#eab308]" />Moderate</span>
-                                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block shadow-[0_0_6px_#22c55e]" />Low</span>
-                            </div>
+
 
                             <button
                                 onClick={onClose}
@@ -237,7 +214,7 @@ export function SatelliteMapSelector({ isOpen, onClose }: SatelliteMapSelectorPr
                             <div className="overflow-y-auto" style={{ maxHeight: '300px' }}>
                                 {allCities.map((c) => {
                                     const isActive = c.id === city.id;
-                                    const color = getDotColor(c);
+                                    const color = getDotColor(isActive);
                                     return (
                                         <button
                                             key={c.id}
