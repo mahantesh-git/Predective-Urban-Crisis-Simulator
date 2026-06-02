@@ -54,14 +54,6 @@ const INTERVENTIONS = [
 
 const COST_WEIGHTS = { LOW: 1.5, MEDIUM: 1.0, HIGH: 0.7 };
 
-/**
- * Generate ranked mitigation recommendations.
- *
- * @param {Object} baselineData  - Raw EnvironmentalData document (latest day)
- * @param {number} currentRisk  - Baseline risk_score from cascade engine
- * @param {number} currentHeatwave - Baseline heatwave level (default 0)
- * @returns {Array} Sorted intervention list (best first)
- */
 const generateRecommendations = (baselineData, currentRisk, currentHeatwave = 0) => {
     const scoredInterventions = INTERVENTIONS.map((intervention) => {
         const policy = { ...intervention.policy };

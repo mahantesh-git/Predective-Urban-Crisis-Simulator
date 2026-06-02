@@ -52,7 +52,7 @@ router.get('/', async (req, res, next) => {
         const cascadeEffects = cascadeResult.cascade_effects;
 
         // Compute per-zone risks
-        const zones = computeZoneRisks(cascadeEffects, globalRisk, cityId);
+        const zones = computeZoneRisks(cascadeEffects, cityId);
 
         // Sort by risk (highest first) for prioritized response
         zones.sort((a, b) => b.risk_score - a.risk_score);
@@ -61,7 +61,7 @@ router.get('/', async (req, res, next) => {
             success: true,
             zones,
         };
-
+ 
         // Include 7-day zone forecast if requested
         if (includeForecast) {
             const historicalData = await EnvironmentalData.find({ cityId }).sort({ date: 1 });
@@ -98,7 +98,7 @@ router.get('/:id', async (req, res, next) => {
         }
 
         const cascadeResult = computeRisk(latest, heatwaveLevel);
-        const zones = computeZoneRisks(cascadeResult.cascade_effects, cascadeResult.risk_score, cityId);
+        const zones = computeZoneRisks(cascadeResult.cascade_effects, cityId);
         const zoneData = zones.find((z) => z.id === req.params.id);
 
         // 7-day forecast always included for single zone

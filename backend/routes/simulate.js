@@ -25,7 +25,7 @@ router.post('/', simulateValidationRules, validate, async (req, res, next) => {
         if (!baseline) {
             return res.status(404).json({
                 success: false,
-                error: 'No environmental data found. Please run `npm run seed` first.',
+                error: 'No environmental data found.',
             });
         }
 
@@ -58,7 +58,7 @@ router.post('/', simulateValidationRules, validate, async (req, res, next) => {
             },
             result: {
                 risk_score: simResult.risk_score,
-                confidence_interval: simResult.confidence_interval,
+                //confidence_interval: simResult.confidence_interval,
                 cascade_effects: simResult.cascade_effects,
                 triggered_systems: simResult.triggered_systems,
                 time_to_impact: simResult.time_to_impact,

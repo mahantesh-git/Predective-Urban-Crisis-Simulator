@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { getForecast, getStatus } from '../api';
 import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, Cloud, CalendarDays } from 'lucide-react';
 import { PageTransition } from '../components/PageTransition';
 import { PageHeader } from '../components/PageHeader';
@@ -136,7 +136,6 @@ export function Forecast() {
   return (
     <PageTransition>
       <div className={`space-y-6 transition-opacity duration-500 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
-        {/* Header */}
         <div className="flex items-start justify-between flex-wrap gap-4">
           <PageHeader
             title={`Forecast — ${city.name}`}
@@ -157,7 +156,6 @@ export function Forecast() {
           </div>
         </div>
 
-        {/* Time Range Selector */}
         <Card className="bg-card border-border p-4 shadow-sm">
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Forecast Range</span>
@@ -178,7 +176,6 @@ export function Forecast() {
           </div>
         </Card>
 
-        {/* Loading state */}
         {loading && (
           <div className="flex items-center justify-center h-64">
             <div className="flex flex-col items-center gap-3">
@@ -235,7 +232,6 @@ export function Forecast() {
                 <div className="flex items-center gap-2"><div className="w-3 h-3 bg-slate-400 rounded-full"></div><span>Confidence Band</span></div>
               </div>
 
-              {/* Explainable AI Block for AQI */}
               {forecast.explainable_ai?.shap_contributions?.aqi && (
                 <div className="mt-6 pt-6 border-t border-border/50">
                   <ShapleyBarChart

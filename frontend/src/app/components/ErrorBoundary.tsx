@@ -38,8 +38,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               <div className="flex-1">
                 <h2 className="text-2xl font-bold text-white mb-2">Application Error</h2>
                 <p className="text-slate-400 mb-4">
-                  CitySentinel AI has encountered an unexpected error. This has been logged and will be
-                  investigated by our engineering team.
+                  CitySentinel AI has encountered an unexpected error.
                 </p>
                 {this.state.error && (
                   <div className="bg-slate-950 border border-slate-800 rounded-lg p-4 mb-4">

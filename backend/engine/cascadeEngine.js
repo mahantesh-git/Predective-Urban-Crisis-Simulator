@@ -1,14 +1,5 @@
 const { normalizeAll } = require('./dataProcessor');
 
-/**
- * Cascade Modeling Engine 2.0 (Enterprise)
- * ─────────────────────────────────────────────────────────────────────────────
- * Implements a dynamic directed graph logic for cascading risks.
- *
- * Risk(t+1) = BaseRisk + Σ (Gamma × SourceRisk × AdjacencyWeight)
- */
-
-// ─── Direct Dependency Graph Weights (Adjacency Matrix) ────────────────────
 const ADJACENCY_MATRIX = {
     'TRAFFIC': { 'AQI': 0.45 },
     'INDUSTRY': { 'AQI': 0.50, 'WATER': 0.60 },
@@ -22,18 +13,10 @@ const DAMPING_FACTOR = 0.8;
 const ITERATIONS = 3;
 const CRISIS_THRESHOLD = 0.60;
 
-/**
- * Run iterative cascade propagation on normalized environmental data.
- *
- * @param {Object} normalized - { aqi, traffic, water, emissions }
- * @param {number} heatwaveLevel - 0–5 severity
- * @returns {Object} cascade effects + total risk score + confidence interval
- */
 const runCascade = (normalized, heatwaveLevel = 0) => {
     const { aqi, traffic, water, emissions } = normalized;
     const heatwaveNorm = Math.min(heatwaveLevel / 5, 1);
 
-    // Initial Base Risks (t=0)
     const base_risks = {
         'AQI': aqi,
         'WATER': water,
@@ -45,7 +28,7 @@ const runCascade = (normalized, heatwaveLevel = 0) => {
 
     let current_risks = { ...base_risks };
 
-    // ── Layer 1: Iterative Matrix Propagation (Markov-style) ───────────────
+    // Layer 1: Iterative Matrix Propagation (Markov-style)
     for (let t = 0; t < ITERATIONS; t++) {
         let next_risks = { ...current_risks };
 
@@ -57,23 +40,18 @@ const runCascade = (normalized, heatwaveLevel = 0) => {
                 cascade_sum += (current_risks[src_node] * weight);
             }
 
-            // Apply damped cascade
             next_risks[target_node] = base_risks[target_node] + (DAMPING_FACTOR * cascade_sum);
-            // Bounded constraints [0, 1]
             next_risks[target_node] = Math.min(Math.max(next_risks[target_node], 0), 1);
         }
         current_risks = next_risks;
     }
 
-    // Extracted Final Risks
     const aqi_risk = current_risks['AQI'];
     const water_risk = current_risks['WATER'];
     const health_risk = current_risks['HEALTH'];
     const traffic_risk = current_risks['TRAFFIC'];
 
-    // ── Layer 2: Total weighted risk (from crisisScoreEngine)
-    // We compute a quick localized aggregate here just for baseline metrics,
-    // though the true crisisScoreEngine uses this output natively.
+    // Layer 2: Total weighted risk (from crisisScoreEngine)
     const risk_score = (
         (0.40 * aqi_risk) +
         (0.25 * water_risk) +
@@ -81,7 +59,7 @@ const runCascade = (normalized, heatwaveLevel = 0) => {
         (0.15 * traffic_risk)
     );
 
-    // ── Layer 3: Confidence Interval ───────────────────────────────────────────
+    // Layer 3: Confidence Interval
     const baseMargin = parseFloat(process.env.CONFIDENCE_MARGIN || '0.12');
     const dynamicVariance = (Math.sin(Date.now() / 10000) * 0.04);
     const margin = Math.max(0.05, baseMargin + dynamicVariance);
@@ -91,14 +69,14 @@ const runCascade = (normalized, heatwaveLevel = 0) => {
         upper: parseFloat(Math.min(risk_score + margin * risk_score, 1).toFixed(4)),
     };
 
-    // ── Layer 4: Triggered Systems ─────────────────────────────────────────────
+    // Layer 4: Triggered Systems
     const triggered_systems = [];
     if (aqi_risk >= CRISIS_THRESHOLD) triggered_systems.push('AIR_QUALITY');
     if (water_risk >= CRISIS_THRESHOLD) triggered_systems.push('WATER_SUPPLY');
     if (health_risk >= CRISIS_THRESHOLD) triggered_systems.push('PUBLIC_HEALTH');
     if (traffic_risk >= CRISIS_THRESHOLD) triggered_systems.push('TRAFFIC_NETWORK');
 
-    // ── Layer 5: Time-to-Impact estimate ───────────────────────────────────────
+    // Layer 5: Time-to-Impact estimate
     const time_to_impact = risk_score > 0 ? Math.max(Math.round((CRISIS_THRESHOLD - risk_score) / 0.05), 0) : null;
 
     return {
@@ -116,12 +94,6 @@ const runCascade = (normalized, heatwaveLevel = 0) => {
     };
 };
 
-/**
- * Convenience: normalize raw data and run full cascade in one call.
- * @param {Object} rawData - Raw environmental data document
- * @param {number} heatwaveLevel - 0–5
- * @returns {Object} Full cascade result
- */
 const computeRisk = (rawData, heatwaveLevel = 0) => {
     const normalized = normalizeAll(rawData);
     return runCascade(normalized, heatwaveLevel);

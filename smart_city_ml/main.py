@@ -7,14 +7,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("smart_city_ml")
 
 from services.model_loader import load_models
-from routers import aqi, water, health, traffic
+from routers import aqi, water, health, traffic, multi_forecast
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Lifespan context manager runs before the server starts accepting requests
-    and after the server stops.
-    """
+
     logger.info("Initializing Smart City ML Backend...")
     load_models()
     yield
@@ -39,9 +36,6 @@ app.include_router(aqi.router)
 app.include_router(water.router)
 app.include_router(health.router)
 app.include_router(traffic.router)
-
-from routers import transparency, multi_forecast
-app.include_router(transparency.router)
 app.include_router(multi_forecast.router)
 
 @app.get("/")

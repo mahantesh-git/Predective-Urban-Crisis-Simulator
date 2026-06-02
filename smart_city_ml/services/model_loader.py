@@ -16,14 +16,8 @@ class ModelRegistry:
 registry = ModelRegistry()
 
 def load_models(models_dir: str = "models"):
-    """
-    Load all pre-trained models from the specified directory.
-    If a model file is missing, the service logs a warning instead of hard crashing,
-    useful for graceful degradation or initial setup phases.
-    """
     logger.info("Loading pre-trained models...")
     
-    # Resolve absolute path for models directory relative to this file
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     resolved_models_dir = os.path.join(base_dir, models_dir)
 

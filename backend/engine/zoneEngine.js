@@ -20,7 +20,6 @@ const path = require('path');
 
 const CITY_ZONES_PATH = path.join(__dirname, '../../datasets/city_zones.json');
 
-// ── Zone Definitions ─────────────────────────────────────────────────────────
 const ZONES = [
     {
         id: 'zone_industrial',

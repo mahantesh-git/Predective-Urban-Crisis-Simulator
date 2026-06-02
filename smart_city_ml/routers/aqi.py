@@ -8,39 +8,16 @@ router = APIRouter(prefix="/predict", tags=["AQI Pipeline"])
 
 @router.post("/aqi", response_model=AQIPredictionResponse)
 async def predict_aqi(request: AQIPredictionRequest, registry: ModelRegistry = Depends(get_registry)):
-    """
-    Generate AQI forecast using Prophet time series model.
-    """
     model = registry.aqi_model
-    
-    # If the model `.pkl` hasn't been added yet, return mock data
-    if model is None:
-        today = datetime.now()
-        forecast = []
-        for d in range(request.days):
-            date_str = (today + timedelta(days=d+1)).strftime("%Y-%m-%d")
-            base = 150.0 + (d * 2.5)
-            forecast.append(AQIForecastPoint(
-                date=date_str,
-                prediction=round(base, 2),
-                lower_bound=round(base - 15.0, 2),
-                upper_bound=round(base + 15.0, 2)
-            ))
-        return AQIPredictionResponse(forecast=forecast)
 
     try:
-        # Prophet prediction logic
         future = model.make_future_dataframe(periods=request.days)
 
-        # The model was trained with a 'pm25_reg' extra regressor.
-        # Forward-fill the last known training value into future rows.
         if "pm25_reg" in model.extra_regressors:
             last_pm25 = model.history["pm25_reg"].mean()
             future["pm25_reg"] = last_pm25
 
         forecast_df = model.predict(future)
-        
-        # Get only the forecasted part
         forecast_sliced = forecast_df.tail(request.days)
         
         forecast_points = []

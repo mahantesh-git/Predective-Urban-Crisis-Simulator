@@ -5,7 +5,6 @@ import { Activity, Zap, TrendingUp, Map, Clock, MapPin, ChevronDown } from 'luci
 import { AnimatePresence } from 'motion/react';
 import React from 'react';
 import { useCity } from '../context/CityContext';
-import { IndiaMapSelector as _IndiaMapSelector } from './IndiaMapSelector';
 import { SatelliteMapSelector } from './SatelliteMapSelector';
 
 export function RootLayout() {
@@ -24,7 +23,6 @@ export function RootLayout() {
   return (
     <div className="min-h-screen bg-background font-sans text-foreground flex flex-col">
 
-      {/* Satellite Map Modal */}
       <SatelliteMapSelector isOpen={mapOpen} onClose={() => setMapOpen(false)} />
 
       {/* Header */}
@@ -56,9 +54,6 @@ export function RootLayout() {
                 </div>
                 <ChevronDown className="w-3.5 h-3.5 text-muted-foreground group-hover:text-rust transition-colors" />
               </button>
-
-              {/* Live indicator */}
-              
             </div>
           </div>
         </div>

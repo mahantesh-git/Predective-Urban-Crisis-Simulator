@@ -23,7 +23,7 @@ export function ShapleyBarChart({ title, contributions, confidencePct }: Shapley
                 {confidencePct && (
                     <span className="text-xs font-medium text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-md">
                         Model Confidence: {confidencePct}%
-                    </span>
+                    </span> 
                 )}
             </div>
 

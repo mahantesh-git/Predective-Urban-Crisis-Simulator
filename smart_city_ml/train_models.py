@@ -1,36 +1,15 @@
-"""
-Urban Crisis ML Training Script — Real City Data
-==================================================
-Uses the real city_day.csv dataset (26 Indian metro cities, 2015-2020)
-from the CPCB air quality monitoring network.
-
-Models trained:
-  1. models/aqi.pkl              - Prophet for AQI time-series forecasting
-  2. models/water.pkl            - Prophet for Water Quality index forecasting
-  3. models/health.pkl           - XGBoost Classifier (4 classes: Low/Mod/High/Critical)
-  4. models/traffic.pkl          - XGBoost Classifier (3 classes: Free/Slow/Congested)
-  5. models/crisis_classifier.json - XGBoost Booster (binary: crisis / no-crisis) for SHAP
-
-Run with:
-  cd smart_city_ml
-  python train_models.py
-"""
-
 import os
-import sys
-import json
 import pickle
 import warnings
 import numpy as np
 import pandas as pd
 import joblib
 import xgboost as xgb
-from xgboost import XGBClassifier, XGBRegressor
+from xgboost import XGBClassifier
 from prophet import Prophet
 
 warnings.filterwarnings("ignore")
 
-# ── Paths ───────────────────────────────────────────────────────────────────────
 BASE_DIR    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATASET     = os.path.join(BASE_DIR, "datasets", "city_day.csv")
 MODELS_DIR  = os.path.join(BASE_DIR, "smart_city_ml", "models")
@@ -38,11 +17,6 @@ DATA_DIR    = os.path.join(BASE_DIR, "smart_city_ml", "data")
 
 os.makedirs(MODELS_DIR, exist_ok=True)
 os.makedirs(DATA_DIR,   exist_ok=True)
-
-print("=" * 62)
-print("  CitySentinel AI -- Urban Crisis Model Training")
-print("  Data: Real CPCB city_day.csv (26 Indian metro cities)")
-print("=" * 62)
 
 # ── 1. Load & clean real city data ──────────────────────────────────────────────
 print("\n[1/4] Loading real city AQI dataset...")
@@ -58,8 +32,6 @@ METRO_CITIES = {
     "Amaravati", "Talcher", "Brajrajnagar",
 }
 df_raw = df_raw[df_raw["City"].isin(METRO_CITIES)].copy()
-print(f"   Cities: {sorted(df_raw['City'].unique().tolist())}")
-print(f"   Rows  : {len(df_raw):,}  |  Date range: {df_raw['Date'].min().date()} -> {df_raw['Date'].max().date()}")
 
 # Fill missing pollutant values with city-level forward fill, then 0
 df_raw.sort_values(["City", "Date"], inplace=True)
@@ -100,7 +72,7 @@ df_daily["humidity"]    = df_daily["humidity"].clip(20, 95)
 
 # Water quality index: derived from real pollutant load
 # Higher pollution (NO2, SO2, PM2.5) -> worse water quality via acid rain/runoff
-pollution_load      = (df_daily["pm25"] / 300 + df_daily["no2"] / 200 + df_daily["so2"] / 150).clip(0, 1)
+pollution_load = (df_daily["pm25"] / 300 + df_daily["no2"] / 200 + df_daily["so2"] / 150).clip(0, 1)
 df_daily["water_quality"] = (85 - pollution_load * 50 + np.random.normal(0, 4, N)).clip(10, 100)
 
 # Industry emission index from real pollutants
@@ -153,15 +125,13 @@ TRAFFIC_CLASSES = len(le_traffic.classes_)
 
 # Save training data for inspection
 df_daily.to_csv(os.path.join(DATA_DIR, "urban_training_data.csv"), index=False)
-print(f"   Built {N} day-level records from {len(df_raw['City'].unique())} cities.")
-print(f"   Crisis days: {df_daily['crisis_label'].sum()} / {N} ({df_daily['crisis_label'].mean()*100:.1f}%)")
-print(f"   Saved -> data/urban_training_data.csv")
+print(f"Saved -> data/urban_training_data.csv")
 
 # ── 3. Train all models ──────────────────────────────────────────────────────────
-print("\n[3/4] Training models on real urban data...\n")
+print("Training models...")
 
 # ── AQI Prophet (real aggregated AQI time-series) ───────────────────────────────
-print("  [1/5] Training AQI Prophet model (regularized)...")
+print("  [1/4] Training AQI Prophet model (regularized)...")
 df_aqi_p = df_daily[["Date", "aqi", "pm25"]].rename(columns={"Date": "ds", "aqi": "y", "pm25": "pm25_reg"})
 aqi_model = Prophet(
     yearly_seasonality=True,
@@ -180,7 +150,7 @@ with open(os.path.join(MODELS_DIR, "aqi.pkl"), "wb") as f:
 print("     OK aqi.pkl saved (regularized)")
 
 # ── Water Quality Prophet ────────────────────────────────────────────────────────
-print("  [2/5] Training Water Quality Prophet model...")
+print("  [2/4] Training Water Quality Prophet model...")
 df_water_p = df_daily[["Date", "water_quality"]].rename(columns={"Date": "ds", "water_quality": "y"})
 water_model = Prophet(
     yearly_seasonality=True,
@@ -193,7 +163,7 @@ with open(os.path.join(MODELS_DIR, "water.pkl"), "wb") as f:
 print("     OK water.pkl saved")
 
 # ── Health XGBoost ───────────────────────────────────────────────────────────────
-print("  [3/5] Training Health Risk XGBoost classifier...")
+print("  [3/4] Training Health Risk XGBoost classifier...")
 X_health = df_daily[["aqi", "pm25", "no2", "so2", "temperature", "humidity", "population_density", "water_quality"]]
 y_health  = df_daily["health_risk_label"]
 health_model = XGBClassifier(
@@ -210,7 +180,7 @@ joblib.dump(health_model, os.path.join(MODELS_DIR, "health.pkl"))
 print("     OK health.pkl saved")
 
 # ── Traffic XGBoost ──────────────────────────────────────────────────────────────
-print("  [4/5] Training Traffic Status XGBoost classifier...")
+print("  [4/4] Training Traffic Status XGBoost classifier...")
 X_traffic = df_daily[["time_of_day", "day_of_week", "traffic_density", "aqi", "temperature"]]
 y_traffic  = df_daily["traffic_status_label"]
 traffic_model = XGBClassifier(
@@ -226,43 +196,12 @@ traffic_model.fit(X_traffic, y_traffic)
 joblib.dump(traffic_model, os.path.join(MODELS_DIR, "traffic.pkl"))
 print("     OK traffic.pkl saved")
 
-# ── Crisis Classifier XGBoost (for SHAP transparency) ───────────────────────────
-print("  [5/5] Training Urban Crisis XGBoost classifier (for SHAP)...")
-WINDOW = 7
-records, labels = [], []
-for i in range(WINDOW, N):
-    win = df_daily.iloc[i - WINDOW: i]
-    feat = []
-    for _, row in win.iterrows():
-        feat.extend([row["aqi"], row["traffic_density"] / 10, row["water_quality"], row["pm25"]])
-    records.append(feat)
-    labels.append(df_daily.iloc[i]["crisis_label"])
-
-X_crisis = np.array(records, dtype=np.float32)
-y_crisis  = np.array(labels,  dtype=np.float32)
-
-dtrain = xgb.DMatrix(X_crisis, label=y_crisis)
-params = {
-    "objective":        "binary:logistic",
-    "eval_metric":      "logloss",
-    "max_depth":        5,
-    "eta":              0.05,
-    "subsample":        0.8,
-    "colsample_bytree": 0.8,
-    "min_child_weight": 3,
-}
-crisis_booster = xgb.train(params, dtrain, num_boost_round=300, verbose_eval=False)
-crisis_booster.save_model(os.path.join(MODELS_DIR, "crisis_classifier.json"))
-print("     OK crisis_classifier.json saved")
 
 # ── Done ─────────────────────────────────────────────────────────────────────────
 print(f"\n[4/4] Verifying saved models...")
-for fname in ["aqi.pkl", "water.pkl", "health.pkl", "traffic.pkl", "crisis_classifier.json"]:
+for fname in ["aqi.pkl", "water.pkl", "health.pkl", "traffic.pkl"]:
     path = os.path.join(MODELS_DIR, fname)
     size = os.path.getsize(path) / 1024
     print(f"   {fname:<28} {size:>8.1f} KB")
 
-print("\n" + "=" * 62)
-print("  All 5 urban crisis models trained on real CPCB data")
-print("  Restart python main.py to load the new models")
-print("=" * 62)
+print("\n All 4 urban crisis models trained on real CPCB data")

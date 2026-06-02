@@ -1,9 +1,3 @@
-/**
- * City definitions for CitySentinel AI
- * Each city has: real neighborhood zones, crisis profile, and environmental baselines.
- * Used to drive the city selector and dynamically update all pages.
- */
-
 export interface CityZone {
     id: string;
     name: string;
@@ -12,11 +6,7 @@ export interface CityZone {
     population: number;
 }
 
-export interface CityEcology {
-    flora: string[];
-    fauna: string[];
-    conservation_projects: string[];
-}
+
 
 export interface CityProfile {
     id: string;
@@ -31,7 +21,6 @@ export interface CityProfile {
     /** A short crisis tagline */
     tagline: string;
     zones: CityZone[];
-    ecology: CityEcology;
 }
 
 export const INDIAN_CITIES: CityProfile[] = [
@@ -52,11 +41,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_waterfront', name: 'Bellandur Lake Zone', type: 'ECOLOGICAL', description: 'Bengaluru\'s largest lake, critically polluted and foam-prone.', population: 12000 },
             { id: 'zone_transport', name: 'Silk Board Junction', type: 'TRANSPORT', description: 'Most congested traffic hotspot on the Outer Ring Road.', population: 18000 },
         ],
-        ecology: {
-            flora: ['Silver Oak', 'Jacaranda', 'Gulmohar', 'Indian Cork Tree'],
-            fauna: ['Slender Loris', 'Spotted Deer', 'Indian Elephant', 'Paradise Flycatcher'],
-            conservation_projects: ['Lalbagh Botanical Preservation', 'Bannerghatta Wildlife Corridor', 'Lake Restoration Drive'],
-        },
     },
     {
         id: 'delhi',
@@ -75,11 +59,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_waterfront', name: 'Yamuna Riverbank', type: 'ECOLOGICAL', description: 'The heavily polluted Yamuna — one of the most toxic rivers in Asia.', population: 28000 },
             { id: 'zone_transport', name: 'NH-48 / Delhi–Gurgaon Expressway', type: 'TRANSPORT', description: 'India\'s most congested urban expressway during peak hours.', population: 35000 },
         ],
-        ecology: {
-            flora: ['Neem', 'Peepal', 'Banyan', 'Amaltas (Laburnum)'],
-            fauna: ['Nilgai', 'Rhesus Macaque', 'Indian Peafowl', 'Blackbuck (Asola)'],
-            conservation_projects: ['Yamuna Biodiversity Park', 'Ridge Reforestation', 'Green Delhi Action Plan'],
-        },
     },
     {
         id: 'mumbai',
@@ -98,11 +77,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_waterfront', name: 'Mithi River Basin', type: 'ECOLOGICAL', description: 'Critically encroached and polluted river — key flood risk channel.', population: 22000 },
             { id: 'zone_transport', name: 'Western Express Highway', type: 'TRANSPORT', description: 'Major arterial road handling >1 million vehicles daily through Mumbai.', population: 40000 },
         ],
-        ecology: {
-            flora: ['Mangroves', 'Flame of the Forest', 'Mast Tree', 'Indian Beech'],
-            fauna: ['Leopard (Sanjay Gandhi NP)', 'Loggerhead Turtle', 'Atlas Moth', 'Flamingos (Sewri)'],
-            conservation_projects: ['Mithi River Rejuvenation', 'Mangrove Conservation Cell', 'Aarey Forest Protection'],
-        },
     },
     {
         id: 'hyderabad',
@@ -121,11 +95,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_waterfront', name: 'Hussain Sagar Lake', type: 'ECOLOGICAL', description: 'Iconic lake in the heart of Hyderabad, heavily polluted by untreated effluent.', population: 14000 },
             { id: 'zone_transport', name: 'ORR — Narsingi Junction', type: 'TRANSPORT', description: 'Key intersection on the Outer Ring Road with acute traffic congestion.', population: 25000 },
         ],
-        ecology: {
-            flora: ['Custard Apple', 'Red Sanders', 'Teak', 'Indian Jujube'],
-            fauna: ['Pangolin', 'Spotted Deer', 'Indian Roller', 'Checkered Keelback'],
-            conservation_projects: ['Haritha Haram (Greenery Drive)', 'Hussain Sagar Cleanup', 'KBR Park Biodiversity Protection'],
-        },
     },
     {
         id: 'chennai',
@@ -144,11 +113,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_waterfront', name: 'Adyar River Estuary', type: 'ECOLOGICAL', description: 'Critically polluted estuary at the edge of the city — major flood risk zone.', population: 16000 },
             { id: 'zone_transport', name: 'Kathipara Junction', type: 'TRANSPORT', description: 'Asia\'s largest cloverleaf interchange — perpetually congested.', population: 22000 },
         ],
-        ecology: {
-            flora: ['Copper Pod', 'Indian Beech', 'Tropical Almond', 'Palmyra Palm'],
-            fauna: ['Olive Ridley Turtle', 'Blackbuck (Guindy)', 'Jackal', 'Star Tortoise'],
-            conservation_projects: ['Adyar Estuary Restoration', 'Pallikaranai Marsh Conservation', 'Sea Turtle Protection Force'],
-        },
     },
     {
         id: 'kolkata',
@@ -167,11 +131,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_waterfront', name: 'East Kolkata Wetlands', type: 'ECOLOGICAL', description: 'UNESCO-recognized sewage-fed wetlands — under acute encroachment pressure.', population: 19000 },
             { id: 'zone_transport', name: 'Gariahat–Ultadanga Corridor', type: 'TRANSPORT', description: 'North-south arterial corridor with chronic vehicle overloading.', population: 36000 },
         ],
-        ecology: {
-            flora: ['Sundari (Mangrove)', 'Royal Palm', 'Banyan', 'Ashoka Tree'],
-            fauna: ['Fishing Cat', 'Gangetic Dolphin', 'Common Langur', 'Yellow Monitor'],
-            conservation_projects: ['East Kolkata Wetlands Protection', 'Hooghly Riverfront Biome', 'Sundarbans Peripheral Support'],
-        },
     },
     {
         id: 'pune',
@@ -190,11 +149,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_waterfront', name: 'Mula-Mutha River Confluence', type: 'ECOLOGICAL', description: 'Highly polluted river confluence at the heart of Pune — sewage discharge hotspot.', population: 13000 },
             { id: 'zone_transport', name: 'Swargate Junction', type: 'TRANSPORT', description: 'Central bus and rickshaw hub with maximum road congestion in Pune.', population: 20000 },
         ],
-        ecology: {
-            flora: ['Banyan', 'Peepal', 'Silver Oak', 'Flame of the Forest'],
-            fauna: ['Chinkara', 'Greater Flamingo', 'Indian Giant Squirrel', 'Barking Deer'],
-            conservation_projects: ['Mula-Mutha River Restoration', 'Vetal Tekdi Preservation', 'Urban Forest initiative'],
-        },
     },
     {
         id: 'ahmedabad',
@@ -213,11 +167,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_waterfront', name: 'Sabarmati Riverfront', type: 'ECOLOGICAL', description: 'Revitalized but under-stress riverfront — industrial effluent upstream threatens it.', population: 17000 },
             { id: 'zone_transport', name: 'Sarkhej–Gandhinagar Highway', type: 'TRANSPORT', description: 'The busiest commuter and freight corridor in Gujarat.', population: 26000 },
         ],
-        ecology: {
-            flora: ['Babul', 'Kala Kikar', 'Rohida', 'Neem'],
-            fauna: ['Greater Flamingo', 'Indian Wild Ass', 'Sarus Crane', 'Blackbuck'],
-            conservation_projects: ['Sabarmati Riverfront Biodiversity', 'Thol Lake Conservation', 'Green Ahmedabad Mission'],
-        },
     },
     {
         id: 'jaipur',
@@ -236,11 +185,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_waterfront', name: 'Man Sagar Lake', type: 'ECOLOGICAL', description: 'Jal Mahal lake — drying under heat waves and groundwater extraction pressure.', population: 8000 },
             { id: 'zone_transport', name: 'Ajmer Road–200 Feet Bypass', type: 'TRANSPORT', description: 'Most congested arterial route from the Pink City to the Western suburbs.', population: 15000 },
         ],
-        ecology: {
-            flora: ['Dhok', 'Salai', 'Khejri', 'Sickle Bush'],
-            fauna: ['Desert Fox', 'Chinkara', 'Leopard (Jhalana)', 'Indian Gazelle'],
-            conservation_projects: ['Nahargarh Biological Park', 'Aravalli Reforestation', 'Jhalana Leopard Reserve Program'],
-        },
     },
     {
         id: 'lucknow',
@@ -259,11 +203,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_waterfront', name: 'Gomti Riverfront', type: 'ECOLOGICAL', description: 'The Gomti — heavily burdened with untreated municipal sewage and industrial waste.', population: 11000 },
             { id: 'zone_transport', name: 'Alambagh Bus Terminal Corridor', type: 'TRANSPORT', description: 'Lucknow\'s biggest inter-city and urban transit chokepoint.', population: 19000 },
         ],
-        ecology: {
-            flora: ['Mango (Dasheri)', 'Mahua', 'Shisham', 'Ashok'],
-            fauna: ['Nilgai', 'Golden Jackal', 'Sarus Crane', 'Indian Grey Mongoose'],
-            conservation_projects: ['Gomti Riverfront Greening', 'Lucknow Botanical Hub', 'Kukrail Forest Conservation'],
-        },
     },
     {
         id: 'surat',
@@ -282,11 +221,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_waterfront', name: 'Tapi Riverfront', type: 'ECOLOGICAL', description: 'River facing stress from industrial effluents and urban runoff.', population: 15000 },
             { id: 'zone_transport', name: 'Udhna Junction', type: 'TRANSPORT', description: 'Critical railway and road transit node with heavy congestion.', population: 28000 },
         ],
-        ecology: {
-            flora: ['Banyan', 'Peepal', 'Neem', 'Asopalav'],
-            fauna: ['Indian Flying Fox', 'Pigeon', 'Egret', 'Macaque'],
-            conservation_projects: ['Tapi River Cleaning', 'Dumas Beach Restoration', 'Urban Canopy Expansion'],
-        },
     },
     {
         id: 'kanpur',
@@ -305,11 +239,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_waterfront', name: 'Ganga Barrage', type: 'ECOLOGICAL', description: 'Critical water source and ecological zone threatened by upstream pollution.', population: 12000 },
             { id: 'zone_transport', name: 'Kanpur Central Station Area', type: 'TRANSPORT', description: 'One of India\'s busiest railway junctions causing local air pollution hotspots.', population: 40000 },
         ],
-        ecology: {
-            flora: ['Sheesham', 'Mango', 'Jamun', 'Babul'],
-            fauna: ['Nilgai', 'Rhesus Monkey', 'Indian Softshell Turtle', 'Gangetic Dolphin (rare)'],
-            conservation_projects: ['Ganga Action Plan', 'Allen Forest Zoo Upgrade', 'Industrial Effluent Treatment'],
-        },
     },
     {
         id: 'nagpur',
@@ -328,11 +257,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_waterfront', name: 'Nag River Basin', type: 'ECOLOGICAL', description: 'The city\'s namesake river, currently severely degraded by sewage.', population: 18000 },
             { id: 'zone_transport', name: 'Wardha Road Corridor', type: 'TRANSPORT', description: 'Major southern arterial route connecting airport and MIHAN.', population: 22000 },
         ],
-        ecology: {
-            flora: ['Teak', 'Bamboo', 'Mahua', 'Tendu'],
-            fauna: ['Tiger (nearby reserves)', 'Sloth Bear', 'Indian Roller', 'Langur'],
-            conservation_projects: ['Nag River Rejuvenation', 'Gorewada Zoo Expansion', 'Ambazari Lake Protection'],
-        },
     },
     {
         id: 'indore',
@@ -351,11 +275,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_waterfront', name: 'Kahn River Basin', type: 'ECOLOGICAL', description: 'Urban river system facing pollution but currently under restoration efforts.', population: 14000 },
             { id: 'zone_transport', name: 'BRTS Corridor', type: 'TRANSPORT', description: 'Main transit artery handling immense daily commuter volume.', population: 25000 },
         ],
-        ecology: {
-            flora: ['Neem', 'Banyan', 'Peepal', 'Gulmohar'],
-            fauna: ['Spotted Deer', 'Peacock', 'Fruit Bat', 'Mongoose'],
-            conservation_projects: ['Kahn River Cleaning', 'Sirpur Lake Bird Habitat', 'City Cleanliness Drive (Swachhata)'],
-        },
     },
     {
         id: 'visakhapatnam',
@@ -374,11 +293,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_waterfront', name: 'RK Beach Coastline', type: 'ECOLOGICAL', description: 'Vulnerable coastline prone to erosion and industrial effluent discharge.', population: 25000 },
             { id: 'zone_transport', name: 'Port Road / NAD Kotha Road', type: 'TRANSPORT', description: 'Heavy freight corridor connecting the port to national highways.', population: 35000 },
         ],
-        ecology: {
-            flora: ['Casuarina', 'Coconut', 'Mango', 'Eastern Ghats Scrub'],
-            fauna: ['Olive Ridley Turtle', 'Bonnet Macaque', 'White-bellied Sea Eagle', 'Brahminy Kite'],
-            conservation_projects: ['Kambalakonda Coastal Reserve', 'Beach Nourishment', 'Eastern Ghats Greening'],
-        },
     },
     // ── NEW CITIES FROM city_day.csv ──────────────────────────────────────────
     {
@@ -398,11 +312,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_transport', name: 'Lengpui Airport Road', type: 'TRANSPORT', description: 'Key access route to the airport.', population: 8000 },
             { id: 'zone_industrial', name: 'Zemabawk', type: 'INDUSTRIAL', description: 'Small-scale industrial and educational zone.', population: 20000 },
         ],
-        ecology: {
-            flora: ['Bamboo', 'Thlalrang', 'Orchids', 'Teak'],
-            fauna: ['Hoolock Gibbon', 'Himalayan Black Bear', 'Clouded Leopard'],
-            conservation_projects: ['Dampa Tiger Reserve Buffer', 'Community Forest Management'],
-        },
     },
     {
         id: 'amaravati',
@@ -421,11 +330,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_transport', name: 'Undavalli Road', type: 'TRANSPORT', description: 'Key connectivity corridor for the capital region.', population: 10000 },
             { id: 'zone_industrial', name: 'Mangalagiri Industrial', type: 'INDUSTRIAL', description: 'Textile and manufacturing hub nearby.', population: 18000 },
         ],
-        ecology: {
-            flora: ['Krishna River Wetlands', 'Paddy Fields', 'Banyan'],
-            fauna: ['River Tern', 'Mugger Crocodile', 'Indian Cormorant'],
-            conservation_projects: ['Krishna Riverbank Restoration', 'Capital Region Greening'],
-        },
     },
     {
         id: 'amritsar',
@@ -444,11 +348,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_transport', name: 'Amritsar Railway Station', type: 'TRANSPORT', description: 'Major rail and road hub serving golden triangle tourism.', population: 30000 },
             { id: 'zone_ecological', name: 'Ram Bagh Gardens', type: 'ECOLOGICAL', description: 'Historic Sikh-era garden with urban tree cover.', population: 12000 },
         ],
-        ecology: {
-            flora: ['Shisham', 'Eucalyptus', 'Wheat Fields (seasonal)'],
-            fauna: ['Common Kingfisher', 'Black Kite', 'Indian Peafowl'],
-            conservation_projects: ['Harike Wetland Conservation', 'Stubble Burning Reduction'],
-        },
     },
     {
         id: 'bhopal',
@@ -467,11 +366,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_commercial', name: 'MP Nagar', type: 'COMMERCIAL', description: 'Central commercial hub with government offices.', population: 50000 },
             { id: 'zone_transport', name: 'Habibganj Railway Corridor', type: 'TRANSPORT', description: 'Prime rail corridor linking Delhi-Mumbai.', population: 25000 },
         ],
-        ecology: {
-            flora: ['Teak', 'Bamboo', 'Khair', 'Ber'],
-            fauna: ['Leopard', 'Nilgai', 'Painted Stork', 'Indian Roller'],
-            conservation_projects: ['Van Vihar National Park', 'Upper Lake Restoration', 'Bhoj Wetland Protection'],
-        },
     },
     {
         id: 'coimbatore',
@@ -490,11 +384,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_ecological', name: 'Nilgiris Foothills', type: 'ECOLOGICAL', description: 'Biodiversity-rich hillslopes bordering the Western Ghats.', population: 15000 },
             { id: 'zone_transport', name: 'Coimbatore Junction', type: 'TRANSPORT', description: 'Major rail junction connecting South India.', population: 30000 },
         ],
-        ecology: {
-            flora: ['Shola Forests', 'Eucalyptus', 'Silver Oak', 'Indian Laurel'],
-            fauna: ['Asian Elephant', 'Gaur', 'Nilgiri Tahr', 'Lion-tailed Macaque'],
-            conservation_projects: ['Anamalai Tiger Reserve', 'Siruvani Watershed Protection'],
-        },
     },
     {
         id: 'ernakulam',
@@ -513,11 +402,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_residential', name: 'Kakkanad', type: 'RESIDENTIAL', description: 'IT hub and newer residential suburb.', population: 80000 },
             { id: 'zone_transport', name: 'Ernakulam Junction', type: 'TRANSPORT', description: 'Key rail hub of Kerala.', population: 28000 },
         ],
-        ecology: {
-            flora: ['Coconut', 'Rubber', 'Mangrove', 'Jackfruit'],
-            fauna: ['Estuarine Crocodile', 'Brahminy Kite', 'Otter', 'Kingfisher'],
-            conservation_projects: ['Vembanad Lake Conservation', 'Mangrove Restoration'],
-        },
     },
     {
         id: 'gurugram',
@@ -536,11 +420,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_transport', name: 'NH-48 / IFFCO Chowk', type: 'TRANSPORT', description: 'Chronic congestion node on Delhi-Jaipur highway.', population: 35000 },
             { id: 'zone_ecological', name: 'Aravalli Biodiversity Park', type: 'ECOLOGICAL', description: 'Restored native forest fighting encroachment.', population: 8000 },
         ],
-        ecology: {
-            flora: ['Aravalli Dhok', 'Khejri', 'Flame of the Forest'],
-            fauna: ['Leopard (Aravalli)', 'Nilgai', 'Painted Sandgrouse'],
-            conservation_projects: ['Aravalli Restoration', 'Sultanpur Bird Sanctuary'],
-        },
     },
     {
         id: 'jodhpur',
@@ -559,11 +438,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_ecological', name: 'Kaylana Lake', type: 'ECOLOGICAL', description: 'Man-made reservoir critical for city water supply.', population: 10000 },
             { id: 'zone_transport', name: 'Jodhpur Junction', type: 'TRANSPORT', description: 'Major rail head for western Rajasthan.', population: 25000 },
         ],
-        ecology: {
-            flora: ['Khejri', 'Ber', 'Rohida', 'Desert Willow'],
-            fauna: ['Great Indian Bustard', 'Chinkara', 'Desert Fox', 'Indian Sandgrouse'],
-            conservation_projects: ['Desert NP Buffer Zone', 'Kaylana Lake Conservation'],
-        },
     },
     {
         id: 'patna',
@@ -582,11 +456,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_waterfront', name: 'Ganga Ghat', type: 'ECOLOGICAL', description: 'Sacred river frontage under pressure from sewage.', population: 20000 },
             { id: 'zone_transport', name: 'Patna Junction', type: 'TRANSPORT', description: 'One of Bihar\'s busiest rail hubs.', population: 40000 },
         ],
-        ecology: {
-            flora: ['Arjun', 'Peepal', 'Jamun', 'Mahua'],
-            fauna: ['Gangetic River Dolphin', 'Mugger Crocodile', 'Painted Stork'],
-            conservation_projects: ['Ganga Action Plan Phase III', 'Vikramshila Gangetic Dolphin Sanctuary'],
-        },
     },
     {
         id: 'shillong',
@@ -605,11 +474,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_transport', name: 'Bara Bazaar Bus Hub', type: 'TRANSPORT', description: 'Main intercity bus terminal.', population: 18000 },
             { id: 'zone_industrial', name: 'Byrnihat Industrial', type: 'INDUSTRIAL', description: 'Industrial area on city outskirts towards Assam.', population: 22000 },
         ],
-        ecology: {
-            flora: ['Rhododendron', 'Orchids', 'Pine', 'Ferns'],
-            fauna: ['Clouded Leopard', 'Hoolock Gibbon', 'Barking Deer'],
-            conservation_projects: ['Sacred Grove Protection', 'Umiam Lake Watershed'],
-        },
     },
     {
         id: 'talcher',
@@ -628,11 +492,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_commercial', name: 'Talcher Market', type: 'COMMERCIAL', description: 'Local commercial area serving the mining township.', population: 18000 },
             { id: 'zone_transport', name: 'Talcher Road Junction', type: 'TRANSPORT', description: 'Key coal freight corridor.', population: 12000 },
         ],
-        ecology: {
-            flora: ['Sal', 'Teak', 'Bamboo', 'River Reeds'],
-            fauna: ['Indian Monitor Lizard', 'Indian Roller', 'Mugger Crocodile'],
-            conservation_projects: ['Coal Ash Pond Containment', 'Brahmani River Clean-up'],
-        },
     },
     {
         id: 'thiruvananthapuram',
@@ -651,11 +510,6 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_ecological', name: 'Kovalam Coastal Zone', type: 'ECOLOGICAL', description: 'Tourist beach coastline facing erosion pressure.', population: 18000 },
             { id: 'zone_transport', name: 'Central Railway Station', type: 'TRANSPORT', description: 'Terminus station of South Kerala rail network.', population: 30000 },
         ],
-        ecology: {
-            flora: ['Coconut', 'Teak', 'Jackfruit', 'Mangrove'],
-            fauna: ['Blackbuck', 'Indian Peafowl', 'Sea Turtle', 'Kingfisher'],
-            conservation_projects: ['Peppara Wildlife Sanctuary', 'Coastal Erosion Control'],
-        },
     },
 ];
 

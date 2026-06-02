@@ -16,7 +16,7 @@ router.get('/', async (req, res, next) => {
         if (!latest) {
             return res.status(404).json({
                 success: false,
-                error: 'No environmental data found. Please run `npm run seed` first.',
+                error: 'No environmental data found.',
             });
         }
 

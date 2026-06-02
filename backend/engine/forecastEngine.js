@@ -42,11 +42,7 @@ const calculateExplainableAI = (latest = {}) => {
         { feature: 'Water Treatment', impact: treatmentImpact }
     ].sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));
 
-    const seed = (traffic + industry + temp + waterQuality) % 11;
-    const model_confidence_pct = parseFloat((85 + seed).toFixed(1));
-
     return {
-        model_confidence_pct,
         shap_contributions: {
             aqi: aqi_contributions,
             water_stress: water_contributions
@@ -132,7 +128,7 @@ const transformNewMLResponse = (aqiResult, waterResult, healthResult, trafficRes
             water: { lower: water_lower, upper: water_upper },
         },
         mode: 'ml_service',
-        note: 'Powered by 5 dedicated modular ML models (Prophet/XGBoost).',
+        note: 'Powered by 4 dedicated modular ML models (Prophet/XGBoost).',
         crisis_probability: parseFloat(prob.toFixed(2)),
         crisis_status: healthResult?.risk_level || 'UNKNOWN',
         time_to_impact_days: timeToImpact,

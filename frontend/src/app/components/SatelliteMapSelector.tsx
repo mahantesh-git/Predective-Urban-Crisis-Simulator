@@ -5,7 +5,7 @@ import { useCity } from '../context/CityContext';
 import { CityProfile } from '../data/cities';
 
 function getDotColor(isActive: boolean) {
-    return isActive ? '#ea580c' : '#94a3b8';
+    return isActive ? '#74ea0cff' : '#94a3b8';
 }
 
 interface SatelliteMapSelectorProps {
