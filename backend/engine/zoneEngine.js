@@ -1,20 +1,5 @@
-/**
- * Zone Engine – Affected Zone Forecast
- * ─────────────────────────────────────────────────────────────────────────────
- * Divides the city into 5 functional zones, each with a distinct
- * environmental exposure profile. Computes per-zone risk scores by
- * weighting the global cascade results against each zone's sensitivity.
- *
- * Zones:
- *  1. Industrial Corridor   – high emission + AQI exposure
- *  2. Residential District  – high health + water exposure
- *  3. Commercial Hub        – high traffic + AQI exposure
- *  4. Waterfront Zone       – high water contamination exposure
- *  5. Transport Gateway     – maximum traffic exposure
- *
- * Each zone has sensitivity weights (0–1) for each cascade sub-system.
- * Zone risk = Σ(sensitivity × cascade_effect_score)
- */
+
+
 const fs = require('fs');
 const path = require('path');
 
@@ -78,7 +63,7 @@ const ZONES = [
         },
         population_density: 'HIGH',
         pop_density_norm: 0.8,
-        hospital_cap_inv: 0.2, // Good hospitals nearby
+        hospital_cap_inv: 0.2, 
         historical_crises: 0.3,
         infrastructure_stress: 0.8,
         socioeconomic_sensitivity: 0.2,
@@ -150,14 +135,14 @@ const getCityZones = (cityId) => {
                 } else {
                     grouped[z.name].population += z.population;
                     grouped[z.name].households += z.households || 0;
-                    // Keep the rest from the first entry
+                    
                 }
             });
 
             return Object.values(grouped).map((z) => {
                 const sens = SENSITIVITY_MAP[z.type] || SENSITIVITY_MAP.RESIDENTIAL;
                 const hh_size = z.population / Math.max(z.households, 1);
-                const p_norm = Math.min(hh_size / 8, 1.0); // Simple proxy for density norm
+                const p_norm = Math.min(hh_size / 8, 1.0); 
 
                 return {
                     id: z.id,
@@ -197,26 +182,25 @@ const getAlertLevel = (score) => {
     return ZONE_ALERT_LEVELS.CRITICAL;
 };
 
-
 const computeZoneRisks = (cascadeEffects, cityId = 'bengaluru') => {
     const targetZones = getCityZones(cityId);
 
     return targetZones.map((zone) => {
         const { sensitivity } = zone;
 
-        // Weighted zone risk = dot product of sensitivity × cascade effects
+        
         const rawScore =
             (sensitivity.aqi_risk * (cascadeEffects.aqi_risk || 0)) +
             (sensitivity.water_risk * (cascadeEffects.water_risk || 0)) +
             (sensitivity.health_risk * (cascadeEffects.health_risk || 0)) +
             (sensitivity.traffic_risk * (cascadeEffects.traffic_risk || 0));
 
-        // Normalize to 0–1 (max possible is 4.0 if all cascade = 1 and sensitivity = 1)
+        
         const risk_score = parseFloat(Math.min(rawScore / 4, 1).toFixed(4));
 
         const alert = getAlertLevel(risk_score);
 
-        // Top contributing system in this zone
+        
         const contributions = {
             AQI: sensitivity.aqi_risk * (cascadeEffects.aqi_risk || 0),
             WATER: sensitivity.water_risk * (cascadeEffects.water_risk || 0),
@@ -226,8 +210,8 @@ const computeZoneRisks = (cascadeEffects, cityId = 'bengaluru') => {
         const primary_threat = Object.entries(contributions)
             .sort((a, b) => b[1] - a[1])[0][0];
 
-        // ── Enterprise Vulnerability Index calculation ─────────────────────
-        // VI_z = 0.30*P_z + 0.25*H_z^{-1} + 0.20*Hi_z + 0.15*I_z + 0.10*S_z
+        
+        
         const vulnerability_score = parseFloat((
             0.30 * (zone.pop_density_norm || 0) +
             0.25 * (zone.hospital_cap_inv || 0) +
@@ -260,17 +244,11 @@ const computeZoneRisks = (cascadeEffects, cityId = 'bengaluru') => {
     });
 };
 
-/**
- * Generate a 7-day zone forecast by applying a risk trend multiplier per day.
- * @param {Array}  zoneResults - Output from computeZoneRisks()
- * @param {Array}  historicalData - 7-day EnvironmentalData array (oldest→newest)
- * @returns {Object} Per-zone 7-day risk forecast
- */
 const generateZoneForecast = (zoneResults, historicalData) => {
     const n = historicalData.length;
     const days = parseInt(process.env.FORECAST_DAYS || '7', 10);
 
-    // Compute global AQI trend slope as a proxy for future risk trend
+    
     const aqiSlope = n >= 2
         ? (historicalData[n - 1].aqi - historicalData[0].aqi) / (n - 1) / 500
         : 0;
@@ -283,7 +261,7 @@ const generateZoneForecast = (zoneResults, historicalData) => {
             const d = new Date(today);
             d.setDate(d.getDate() + i);
 
-            // Project zone risk forward using trend + small zone-specific noise
+            
             const noise = Math.sin(i * 2.1 + zone.id.length) * 0.02;
             const projected = parseFloat(
                 Math.min(Math.max(zone.risk_score + aqiSlope * i + noise, 0), 1).toFixed(4)

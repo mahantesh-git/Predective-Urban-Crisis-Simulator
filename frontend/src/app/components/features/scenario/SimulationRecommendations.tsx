@@ -45,7 +45,6 @@ interface SimulationRecommendationsProps {
   triggeredSystems: string[];
 }
 
-
 const CATEGORY_META: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   TRAFFIC:  { label: 'Traffic',  color: 'bg-purple-500/15 text-purple-400 border-purple-400/30', icon: Car },
   INDUSTRY: { label: 'Industry', color: 'bg-orange-500/15 text-orange-400 border-orange-400/30', icon: Wind },
@@ -93,7 +92,6 @@ function buildExplainability(strategy: Strategy): string[] {
     ? reasons
     : [`This strategy reduces overall urban crisis risk by ${(strategy.risk_reduction * 100).toFixed(1)} percentage points.`];
 }
-
 
 export function SimulationRecommendations({
   cityId,

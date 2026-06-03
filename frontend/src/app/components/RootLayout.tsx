@@ -25,7 +25,7 @@ export function RootLayout() {
 
       <SatelliteMapSelector isOpen={mapOpen} onClose={() => setMapOpen(false)} />
 
-      {/* Header */}
+      {}
       <header className="bg-card border-b border-border shadow-sm shrink-0">
         <div className="w-full px-[15px] py-4">
           <div className="flex items-center justify-between">
@@ -39,9 +39,9 @@ export function RootLayout() {
               </div>
             </div>
 
-            {/* Right: City Selector + Status */}
+            {}
             <div className="flex items-center gap-4">
-              {/* City Selector — opens India Map Modal */}
+              {}
               <button
                 onClick={() => setMapOpen(true)}
                 className="flex items-center gap-2 bg-muted/60 hover:bg-muted border border-border rounded-full px-3 py-1.5 transition-all hover:border-rust/40 group"
@@ -59,7 +59,7 @@ export function RootLayout() {
         </div>
       </header>
 
-      {/* Navigation */}
+      {}
       <nav className="bg-card border-b border-border shrink-0">
         <div className="w-full px-[15px]">
           <div className="flex gap-1 overflow-x-auto hide-scrollbar">
@@ -84,10 +84,10 @@ export function RootLayout() {
         </div>
       </nav>
 
-      {/* Main Content Area with AnimatePresence */}
+      {}
       <main className="flex-1 w-full px-[15px] py-8 overflow-hidden relative">
         <AnimatePresence mode="wait">
-          {/* Keying by pathname triggers unmount/remount on route change */}
+          {}
           <React.Fragment key={location.pathname}>
             <Outlet />
           </React.Fragment>

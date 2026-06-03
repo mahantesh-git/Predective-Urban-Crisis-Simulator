@@ -42,6 +42,7 @@ router.get('/', async (req, res, next) => {
             cascade_effects: result.cascade_effects,
             triggered_systems: result.triggered_systems,
             crisis_level: getCrisisLevel(result.risk_score),
+            crisis_threshold: result.crisis_threshold,
         });
     } catch (err) {
         next(err);

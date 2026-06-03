@@ -20,30 +20,29 @@ export function SatelliteMapSelector({ isOpen, onClose }: SatelliteMapSelectorPr
     const markersRef = useRef<any[]>([]);
     const leafletRef = useRef<any>(null);
 
-    // Initialize the Leaflet map
+    
     useEffect(() => {
         if (!isOpen) return;
 
-        // Dynamically import Leaflet to avoid SSR issues
+        
         const initMap = async () => {
             if (typeof window === 'undefined') return;
 
             const L = (await import('leaflet')).default;
             leafletRef.current = L;
 
-            // Wait a tick to let the DOM fully render
+            
             setTimeout(() => {
                 if (!mapContainerRef.current) return;
-                if (mapRef.current) return; // already initialized
+                if (mapRef.current) return; 
 
-                // Create map centered on India
+                
                 const map = L.map(mapContainerRef.current, {
                     center: [22.5, 82],
                     zoom: 5,
                     zoomControl: true,
                 });
 
-                // Satellite tile layer (ESRI World Imagery)
                 L.tileLayer(
                     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                     {
@@ -52,7 +51,6 @@ export function SatelliteMapSelector({ isOpen, onClose }: SatelliteMapSelectorPr
                     }
                 ).addTo(map);
 
-                // Labels layer on top of satellite
                 L.tileLayer(
                     'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
                     {
@@ -63,15 +61,13 @@ export function SatelliteMapSelector({ isOpen, onClose }: SatelliteMapSelectorPr
                 ).addTo(map);
 
                 mapRef.current = map;
-
-                // Add markers for all cities
+                
                 addMarkers(L, map, allCities, city.id, setCityById, onClose);
             }, 100);
         };
 
         initMap();
-
-        // Cleanup on close
+ 
         return () => {
             if (mapRef.current) {
                 mapRef.current.remove();
@@ -81,11 +77,11 @@ export function SatelliteMapSelector({ isOpen, onClose }: SatelliteMapSelectorPr
         };
     }, [isOpen]);
 
-    // Update markers when selected city changes
+    
     useEffect(() => {
         if (!mapRef.current || !leafletRef.current) return;
         const L = leafletRef.current;
-        // Clear and re-add markers to update active state
+        
         markersRef.current.forEach((m) => m.remove());
         markersRef.current = [];
         addMarkers(L, mapRef.current, allCities, city.id, setCityById, onClose);
@@ -148,7 +144,7 @@ export function SatelliteMapSelector({ isOpen, onClose }: SatelliteMapSelectorPr
 
             marker.bindPopup(popupContent, { maxWidth: 220, minWidth: 180 });
 
-            // Also select on marker click directly
+            
             marker.on('click', () => {
                 onSelect(c.id);
                 close();
@@ -158,7 +154,7 @@ export function SatelliteMapSelector({ isOpen, onClose }: SatelliteMapSelectorPr
             markersRef.current.push(marker);
         });
 
-        // Register global callback for popup button
+        
         (window as any).__selectCity = (id: string) => {
             onSelect(id);
             close();
@@ -184,14 +180,12 @@ export function SatelliteMapSelector({ isOpen, onClose }: SatelliteMapSelectorPr
                         className="relative bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
                         style={{ width: '90vw', maxWidth: '1100px', height: '85vh', maxHeight: '700px' }}
                     >
-                        {/* Header */}
+                        {}
                         <div className="absolute top-0 left-0 right-0 z-[2000] flex items-center justify-between px-5 py-3 bg-card/95 backdrop-blur-sm border-b border-border">
                             <div>
                                 <h2 className="text-base font-bold font-serif text-card-foreground">Select City</h2>
                                 <p className="text-[10px] text-muted-foreground">Click a marker or use the list to select a city. Zoom and pan freely.</p>
                             </div>
-
-
 
                             <button
                                 onClick={onClose}
@@ -201,12 +195,12 @@ export function SatelliteMapSelector({ isOpen, onClose }: SatelliteMapSelectorPr
                             </button>
                         </div>
 
-                        {/* Map Container */}
+                        {}
                         <div className="absolute inset-0 top-[56px]">
                             <div ref={mapContainerRef} className="w-full h-full" />
                         </div>
 
-                        {/* City List Overlay (bottom right) */}
+                        {}
                         <div className="absolute bottom-3 right-3 z-[2000] bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-xl overflow-hidden" style={{ width: '190px', maxHeight: '340px' }}>
                             <div className="px-3 py-2 border-b border-border">
                                 <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">{allCities.length} Cities</p>
@@ -220,7 +214,7 @@ export function SatelliteMapSelector({ isOpen, onClose }: SatelliteMapSelectorPr
                                             key={c.id}
                                             onClick={() => {
                                                 setCityById(c.id);
-                                                // Fly map to that city
+                                                
                                                 if (mapRef.current) {
                                                     mapRef.current.flyTo([c.lat, c.lng], 10, { duration: 1.2 });
                                                 }

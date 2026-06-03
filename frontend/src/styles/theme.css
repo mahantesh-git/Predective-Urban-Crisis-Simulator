@@ -3,25 +3,25 @@
 :root {
   --font-size: 16px;
 
-  /* Base - Enterprise Dark Slate */
+  
   --background: #0B0E14;
-  /* Deep Slate Background */
+  
   --foreground: #E2E8F0;
-  /* Brighter text for readability */
+  
 
-  /* Cards & Floating Panels */
+  
   --card: #151A22;
-  /* Slightly elevated from background */
+  
   --card-foreground: #E2E8F0;
   --popover: #151A22;
   --popover-foreground: #E2E8F0;
 
-  /* Primary Action */
+  
   --primary: #3B82F6;
-  /* Tech Blue */
+  
   --primary-foreground: #FFFFFF;
 
-  /* Secondary / Muted */
+  
   --secondary: #1E293B;
   --secondary-foreground: #94A3B8;
   --muted: #1E293B;
@@ -29,12 +29,12 @@
   --accent: #2563EB;
   --accent-foreground: #FFFFFF;
 
-  /* System States */
+  
   --destructive: #EF4444;
-  /* CRITICAL Red */
+  
   --destructive-foreground: #FFFFFF;
 
-  /* UI Elements */
+  
   --border: #334155;
   --input: #1E293B;
   --input-background: #0F172A;
@@ -44,21 +44,21 @@
   --font-weight-medium: 500;
   --font-weight-normal: 400;
   --radius: 0.5rem;
-  /* sharper corners for enterprise look */
+  
 
-  /* Crisis Alert Scale (CRITICAL / HIGH / MODERATE / LOW) */
+  
   --chart-1: #EF4444;
-  /* CRITICAL - Red */
+  
   --chart-2: #F97316;
-  /* HIGH - Orange */
+  
   --chart-3: #EAB308;
-  /* MODERATE - Yellow */
+  
   --chart-4: #22C55E;
-  /* LOW - Green */
+  
   --chart-5: #3B82F6;
-  /* Info / Neutral - Blue */
+  
 
-  /* Sidebar (If used) */
+  
   --sidebar: #0B0E14;
   --sidebar-foreground: #E2E8F0;
   --sidebar-primary: #3B82F6;
@@ -70,7 +70,7 @@
 }
 
 .dark {
-  /* Force both .dark and :root to be the same Enterprise Dark theme */
+  
   --background: #0B0E14;
   --foreground: #E2E8F0;
   --card: #151A22;
@@ -147,7 +147,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Fonts */
+  
   --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "Fira Code", monospace;
 }
@@ -161,12 +161,9 @@
     @apply bg-background text-foreground;
   }
 
-  /* dark mode applied via class on <html> in index.html */
+  
 
-  /**
-  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
-  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
-  */
+  
 
   html {
     font-size: var(--font-size);

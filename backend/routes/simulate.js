@@ -29,10 +29,8 @@ router.post('/', simulateValidationRules, validate, async (req, res, next) => {
             });
         }
 
-        // Compute baseline risk (no policy applied)
         const baselineRisk = computeRisk(baseline, heatwaveLevel);
 
-        // Run simulation with policy applied
         const simResult = runSimulation(baseline, {
             trafficReduction,
             industrialCut,
@@ -40,8 +38,7 @@ router.post('/', simulateValidationRules, validate, async (req, res, next) => {
             waterConservation,
             greenSpaceExpansion
         });
-
-        // Compute improvement delta
+        
         const riskReduction = parseFloat((baselineRisk.risk_score - simResult.risk_score).toFixed(4));
         const percentImprovement = baselineRisk.risk_score > 0
             ? parseFloat(((riskReduction / baselineRisk.risk_score) * 100).toFixed(2))
@@ -58,7 +55,7 @@ router.post('/', simulateValidationRules, validate, async (req, res, next) => {
             },
             result: {
                 risk_score: simResult.risk_score,
-                //confidence_interval: simResult.confidence_interval,
+                
                 cascade_effects: simResult.cascade_effects,
                 triggered_systems: simResult.triggered_systems,
                 time_to_impact: simResult.time_to_impact,
@@ -75,14 +72,12 @@ router.post('/', simulateValidationRules, validate, async (req, res, next) => {
     }
 });
 
-
 const getCrisisLevel = (score) => {
     if (score < 0.30) return 'LOW';
     if (score < 0.55) return 'MODERATE';
     if (score < 0.75) return 'HIGH';
     return 'CRITICAL';
 };
-
 
 router.post('/compare', async (req, res, next) => {
     try {

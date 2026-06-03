@@ -18,11 +18,9 @@ DATA_DIR    = os.path.join(BASE_DIR, "smart_city_ml", "data")
 os.makedirs(MODELS_DIR, exist_ok=True)
 os.makedirs(DATA_DIR,   exist_ok=True)
 
-# ── 1. Load & clean real city data ──────────────────────────────────────────────
 print("\n[1/4] Loading real city AQI dataset...")
 df_raw = pd.read_csv(DATASET, parse_dates=["Date"])
 
-# Keep only the urban/metro cities — drop small towns if any
 METRO_CITIES = {
     "Delhi", "Mumbai", "Bengaluru", "Chennai", "Kolkata",
     "Hyderabad", "Ahmedabad", "Pune", "Jaipur", "Lucknow",
@@ -33,7 +31,6 @@ METRO_CITIES = {
 }
 df_raw = df_raw[df_raw["City"].isin(METRO_CITIES)].copy()
 
-# Fill missing pollutant values with city-level forward fill, then 0
 df_raw.sort_values(["City", "Date"], inplace=True)
 df_raw.reset_index(drop=True, inplace=True)
 pollutant_cols = ["PM2.5", "PM10", "NO", "NO2", "NOx", "NH3", "CO", "SO2", "O3", "AQI"]
@@ -43,7 +40,6 @@ df_raw[pollutant_cols] = (
 )
 df_raw[pollutant_cols] = df_raw[pollutant_cols].fillna(0)
 
-# ── 2. Build aggregated city-level daily dataset ─────────────────────────────────
 print("\n[2/4] Building feature matrix...")
 
 df_daily = df_raw.groupby("Date").agg(
@@ -61,21 +57,16 @@ df_daily.reset_index(drop=True, inplace=True)
 np.random.seed(42)
 N = len(df_daily)
 
-# Month & seasonal features
 df_daily["month"]     = df_daily["Date"].dt.month
 df_daily["day_of_week"] = df_daily["Date"].dt.dayofweek
 
-# Temperature proxy from O3 (ozone correlates with heat) + seasonal sine wave
-df_daily["temperature"] = 25 + 10 * np.sin((df_daily["month"] - 3) * np.pi / 6) + np.random.normal(0, 2, N)
-df_daily["humidity"]    = 60 - 15 * np.cos((df_daily["month"] - 6) * np.pi / 6) + np.random.normal(0, 5, N)
+df_daily["temperature"] = 25 + 10 * np.sin((df_daily["month"] - 3) * np.pi / 6) + np.random.normal(0, 5, N)
+df_daily["humidity"]    = 60 - 15 * np.cos((df_daily["month"] - 6) * np.pi / 6) + np.random.normal(0, 15, N)
 df_daily["humidity"]    = df_daily["humidity"].clip(20, 95)
 
-# Water quality index: derived from real pollutant load
-# Higher pollution (NO2, SO2, PM2.5) -> worse water quality via acid rain/runoff
 pollution_load = (df_daily["pm25"] / 300 + df_daily["no2"] / 200 + df_daily["so2"] / 150).clip(0, 1)
 df_daily["water_quality"] = (85 - pollution_load * 50 + np.random.normal(0, 4, N)).clip(10, 100)
 
-# Industry emission index from real pollutants
 df_daily["industry_emission"] = (
     (df_daily["co"]  / 50)  * 40 +
     (df_daily["no2"] / 200) * 35 +
@@ -83,16 +74,13 @@ df_daily["industry_emission"] = (
     np.random.normal(0, 3, N)
 ).clip(0, 100)
 
-# Traffic density: AQI-correlated + weekday pattern
 weekday_boost = df_daily["day_of_week"].map({0: 1.2, 1: 1.3, 2: 1.3, 3: 1.2, 4: 1.4, 5: 0.8, 6: 0.6}).fillna(1.0)
-df_daily["traffic_density"] = (df_daily["aqi"] * 1.5 * weekday_boost + np.random.normal(0, 20, N)).clip(0, 1000)
+df_daily["traffic_density"] = (df_daily["aqi"] * 1.5 * weekday_boost + np.random.normal(0, 150, N)).clip(0, 1000)
 
-# Urban green cover (declining trend over the dataset period)
 df_daily["urban_expansion_rate"] = np.random.uniform(0.5, 3.0, N)
 df_daily["population_density"]  = np.linspace(12000, 15500, N)
 df_daily["time_of_day"]         = 12
 
-# ── Composite crisis score ───────────────────────────────────────────────────────
 aqi_norm     = (df_daily["aqi"]              / 500).clip(0, 1)
 water_norm   = ((100 - df_daily["water_quality"]) / 100).clip(0, 1)
 traffic_norm = (df_daily["traffic_density"]   / 1000).clip(0, 1)
@@ -101,8 +89,6 @@ emit_norm    = (df_daily["industry_emission"] / 100).clip(0, 1)
 df_daily["crisis_score"] = (aqi_norm * 0.40 + water_norm * 0.25 + traffic_norm * 0.20 + emit_norm * 0.15) * 100
 df_daily["crisis_label"] = (df_daily["crisis_score"] >= 50).astype(int)
 
-# Classification labels — use LabelEncoder to guarantee 0-indexed classes
-# (Real urban data rarely has AQI < 50, so pd.cut labels can skip 0)
 from sklearn.preprocessing import LabelEncoder
 
 raw_health = pd.cut(
@@ -123,33 +109,29 @@ le_traffic = LabelEncoder()
 df_daily["traffic_status_label"] = le_traffic.fit_transform(raw_traffic)
 TRAFFIC_CLASSES = len(le_traffic.classes_)
 
-# Save training data for inspection
 df_daily.to_csv(os.path.join(DATA_DIR, "urban_training_data.csv"), index=False)
 print(f"Saved -> data/urban_training_data.csv")
 
-# ── 3. Train all models ──────────────────────────────────────────────────────────
 print("Training models...")
 
-# ── AQI Prophet (real aggregated AQI time-series) ───────────────────────────────
 print("  [1/4] Training AQI Prophet model (regularized)...")
 df_aqi_p = df_daily[["Date", "aqi", "pm25"]].rename(columns={"Date": "ds", "aqi": "y", "pm25": "pm25_reg"})
 aqi_model = Prophet(
     yearly_seasonality=True,
     weekly_seasonality=True,
     daily_seasonality=False,
-    changepoint_prior_scale=0.05,      # lowered from 0.15 — prevents trend memorisation
-    seasonality_prior_scale=5.0,       # dampens seasonal component magnitude
-    n_changepoints=25,                 # fewer changepoints = smoother trend
+    changepoint_prior_scale=0.05,
+    seasonality_prior_scale=5.0,
+    n_changepoints=25,
     interval_width=0.90,
 )
-aqi_model.add_seasonality(name='monthly', period=30.5, fourier_order=5)  # monsoon/winter cycles
+aqi_model.add_seasonality(name='monthly', period=30.5, fourier_order=5)
 aqi_model.add_regressor("pm25_reg", standardize=True)
 aqi_model.fit(df_aqi_p)
 with open(os.path.join(MODELS_DIR, "aqi.pkl"), "wb") as f:
     pickle.dump(aqi_model, f, protocol=pickle.HIGHEST_PROTOCOL)
 print("     OK aqi.pkl saved (regularized)")
 
-# ── Water Quality Prophet ────────────────────────────────────────────────────────
 print("  [2/4] Training Water Quality Prophet model...")
 df_water_p = df_daily[["Date", "water_quality"]].rename(columns={"Date": "ds", "water_quality": "y"})
 water_model = Prophet(
@@ -162,13 +144,12 @@ with open(os.path.join(MODELS_DIR, "water.pkl"), "wb") as f:
     pickle.dump(water_model, f, protocol=pickle.HIGHEST_PROTOCOL)
 print("     OK water.pkl saved")
 
-# ── Health XGBoost ───────────────────────────────────────────────────────────────
 print("  [3/4] Training Health Risk XGBoost classifier...")
-X_health = df_daily[["aqi", "pm25", "no2", "so2", "temperature", "humidity", "population_density", "water_quality"]]
+X_health = df_daily[["pm25", "pm10", "no2", "so2", "temperature", "humidity", "population_density", "water_quality"]]
 y_health  = df_daily["health_risk_label"]
 health_model = XGBClassifier(
-    n_estimators=300,
-    max_depth=5,
+    n_estimators=100,
+    max_depth=3,
     learning_rate=0.05,
     eval_metric="mlogloss",
     num_class=HEALTH_CLASSES,
@@ -179,13 +160,12 @@ health_model.fit(X_health, y_health)
 joblib.dump(health_model, os.path.join(MODELS_DIR, "health.pkl"))
 print("     OK health.pkl saved")
 
-# ── Traffic XGBoost ──────────────────────────────────────────────────────────────
 print("  [4/4] Training Traffic Status XGBoost classifier...")
-X_traffic = df_daily[["time_of_day", "day_of_week", "traffic_density", "aqi", "temperature"]]
+X_traffic = df_daily[["time_of_day", "day_of_week", "aqi", "temperature", "humidity"]]
 y_traffic  = df_daily["traffic_status_label"]
 traffic_model = XGBClassifier(
-    n_estimators=200,
-    max_depth=4,
+    n_estimators=100,
+    max_depth=3,
     learning_rate=0.05,
     eval_metric="mlogloss",
     num_class=TRAFFIC_CLASSES,
@@ -196,8 +176,6 @@ traffic_model.fit(X_traffic, y_traffic)
 joblib.dump(traffic_model, os.path.join(MODELS_DIR, "traffic.pkl"))
 print("     OK traffic.pkl saved")
 
-
-# ── Done ─────────────────────────────────────────────────────────────────────────
 print(f"\n[4/4] Verifying saved models...")
 for fname in ["aqi.pkl", "water.pkl", "health.pkl", "traffic.pkl"]:
     path = os.path.join(MODELS_DIR, fname)

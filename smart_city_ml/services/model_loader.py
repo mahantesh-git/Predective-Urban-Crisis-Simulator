@@ -33,7 +33,7 @@ def load_models(models_dir: str = "models"):
         filepath = os.path.join(resolved_models_dir, filename)
         if os.path.exists(filepath):
             try:
-                # Prophet models use pickle; XGBoost/sklearn models use joblib
+
                 if filename in ["aqi.pkl", "water.pkl"]:
                     with open(filepath, 'rb') as f:
                         model = pickle.load(f)

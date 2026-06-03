@@ -15,7 +15,6 @@ interface CascadingRiskGraphProps {
     simulated?: CascadeEffects;
 }
 
-// Layout configuration
 const NODES = [
     { id: 'traffic', label: 'Traffic Density', icon: Car, x: 100, y: 80 },
     { id: 'aqi', label: 'Air Quality (AQI)', icon: Cloud, x: 300, y: 80 },
@@ -34,7 +33,7 @@ const EDGES = [
 export function CascadingRiskGraph({ baseline, simulated }: CascadingRiskGraphProps) {
     const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
-    // Normalize data for nodes
+    
     const getNodeIntensity = (id: string, data: CascadeEffects | undefined) => {
         if (!data) return 0;
         switch (id) {
@@ -86,7 +85,7 @@ export function CascadingRiskGraph({ baseline, simulated }: CascadingRiskGraphPr
                         </marker>
                     </defs>
 
-                    {/* Draw Edges */}
+                    {}
                     {EDGES.map((edge, i) => {
                         const src = NODES.find(n => n.id === edge.source)!;
                         const tgt = NODES.find(n => n.id === edge.target)!;
@@ -100,12 +99,12 @@ export function CascadingRiskGraph({ baseline, simulated }: CascadingRiskGraphPr
                         let txtY = (src.y + tgt.y) / 2 - 8;
 
                         if (isTrafficHealth) {
-                            // Curve to the right
+                            
                             d = `M ${src.x} ${src.y} Q 260 150 ${tgt.x} ${tgt.y}`;
                             txtX = 230;
                             txtY = 145;
                         } else if (isAqiWater) {
-                            // Curve to the left
+                            
                             d = `M ${src.x} ${src.y} Q 140 150 ${tgt.x} ${tgt.y}`;
                             txtX = 170;
                             txtY = 145;
@@ -138,7 +137,7 @@ export function CascadingRiskGraph({ baseline, simulated }: CascadingRiskGraphPr
                         );
                     })}
 
-                    {/* Draw Nodes */}
+                    {}
                     {NODES.map((node) => {
                         const intensity = getNodeIntensity(node.id, simulated || baseline);
                         const { stroke, fill, text } = getColor(intensity);
@@ -152,11 +151,11 @@ export function CascadingRiskGraph({ baseline, simulated }: CascadingRiskGraphPr
                                 className="cursor-pointer transition-all duration-300"
                                 style={{ transform: `translate(${node.x}px, ${node.y}px) scale(${isHovered ? 1.1 : 1})` }}
                             >
-                                {/* Outer Glow */}
+                                {}
                                 <circle r="35" fill={fill} className="animate-pulse" opacity="0.5" />
-                                {/* Main Node */}
+                                {}
                                 <circle r="25" fill="#0f172a" stroke={stroke} strokeWidth={isHovered ? 3 : 2} />
-                                {/* Icon Placeholder (Since Lucide icons cannot be easily embedded in pure SVG without mapping paths, we use initials) */}
+                                {}
                                 <text x="0" y="-2" fill={text} fontSize="14" fontWeight="900" textAnchor="middle" dominantBaseline="middle">
                                     {node.id.substring(0, 3).toUpperCase()}
                                 </text>
@@ -164,7 +163,7 @@ export function CascadingRiskGraph({ baseline, simulated }: CascadingRiskGraphPr
                                     {getDisplayValue(node.id, simulated || baseline)}
                                 </text>
 
-                                {/* Label Box */}
+                                {}
                                 <rect x="-40" y="32" width="80" height="18" rx="4" fill="#1e293b" opacity="0.9" />
                                 <text x="0" y="44" fill="#f8fafc" fontSize="9" fontWeight="600" textAnchor="middle">
                                     {node.label}

@@ -37,12 +37,11 @@ from sklearn.metrics import (
 )
 from sklearn.preprocessing import LabelEncoder
 import matplotlib
-matplotlib.use("Agg")          # headless – saves PNGs, does not need a display
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 warnings.filterwarnings("ignore")
 
-# ── Paths ──────────────────────────────────────────────────────────────────────
 BASE_DIR   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATASET    = os.path.join(BASE_DIR, "datasets", "city_day.csv")
 DATA_DIR   = os.path.join(BASE_DIR, "smart_city_ml", "data")
@@ -54,7 +53,6 @@ print("=" * 65)
 print("  PUECS - Model Fit Evaluation (Over/Underfit Analysis)")
 print("=" * 65)
 
-# ── 1. Rebuild the feature matrix (same logic as train_models.py) ──────────────
 print("\n[1/4] Loading and preparing data...")
 METRO_CITIES = {
     "Delhi", "Mumbai", "Bengaluru", "Chennai", "Kolkata",
@@ -81,8 +79,8 @@ np.random.seed(42)
 N = len(df_daily)
 df_daily["month"]       = df_daily["Date"].dt.month
 df_daily["day_of_week"] = df_daily["Date"].dt.dayofweek
-df_daily["temperature"] = 25 + 10 * np.sin((df_daily["month"] - 3) * np.pi / 6) + np.random.normal(0, 2, N)
-df_daily["humidity"]    = (60 - 15 * np.cos((df_daily["month"] - 6) * np.pi / 6) + np.random.normal(0, 5, N)).clip(20, 95)
+df_daily["temperature"] = 25 + 10 * np.sin((df_daily["month"] - 3) * np.pi / 6) + np.random.normal(0, 5, N)
+df_daily["humidity"]    = (60 - 15 * np.cos((df_daily["month"] - 6) * np.pi / 6) + np.random.normal(0, 15, N)).clip(20, 95)
 
 pollution_load           = (df_daily["pm25"]/300 + df_daily["no2"]/200 + df_daily["so2"]/150).clip(0,1)
 df_daily["water_quality"] = (85 - pollution_load*50 + np.random.normal(0,4,N)).clip(10,100)
@@ -90,11 +88,10 @@ df_daily["industry_emission"] = (
     (df_daily["co"]/50)*40 + (df_daily["no2"]/200)*35 + (df_daily["so2"]/150)*25 + np.random.normal(0,3,N)
 ).clip(0,100)
 weekday_boost = df_daily["day_of_week"].map({0:1.2,1:1.3,2:1.3,3:1.2,4:1.4,5:0.8,6:0.6}).fillna(1.0)
-df_daily["traffic_density"] = (df_daily["aqi"]*1.5*weekday_boost + np.random.normal(0,20,N)).clip(0,1000)
+df_daily["traffic_density"] = (df_daily["aqi"]*1.5*weekday_boost + np.random.normal(0,150,N)).clip(0,1000)
 df_daily["population_density"] = np.linspace(12000,15500,N)
 df_daily["time_of_day"] = 12
 
-# Classification labels
 le_health = LabelEncoder()
 df_daily["health_risk_label"] = le_health.fit_transform(
     pd.cut(df_daily["aqi"], bins=[-np.inf,50,100,200,np.inf], labels=["Good","Moderate","Poor","Severe"])
@@ -113,9 +110,6 @@ df_daily["crisis_label"] = (df_daily["crisis_score"] >= 50).astype(int)
 
 print(f"   Dataset: {N} days  |  Crisis rate: {df_daily['crisis_label'].mean()*100:.1f}%")
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 2. XGBoost Classifiers – Train/Test Split Comparison
-# ─────────────────────────────────────────────────────────────────────────────
 print("\n[2/4] Evaluating XGBoost classifiers (80/20 stratified split)...")
 
 results = []
@@ -147,7 +141,6 @@ def evaluate_xgb(name, X, y, label_names, params):
     report = classification_report(y_test, clf.predict(X_test), target_names=label_names, digits=3)
     print("     " + report.replace("\n", "\n     "))
 
-    # Confusion matrix PNG
     cm = confusion_matrix(y_test, clf.predict(X_test))
     fig, ax = plt.subplots(figsize=(6, 5))
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=label_names)
@@ -165,27 +158,24 @@ def evaluate_xgb(name, X, y, label_names, params):
         "Gap": round(gap, 4), "Verdict": verdict
     })
 
-# Health Risk
 evaluate_xgb(
     "Health Risk Classifier",
-    df_daily[["aqi","pm25","no2","so2","temperature","humidity","population_density","water_quality"]],
+    df_daily[["pm25","pm10","no2","so2","temperature","humidity","population_density","water_quality"]],
     df_daily["health_risk_label"],
     list(le_health.classes_),
-    {"n_estimators": 300, "max_depth": 5, "learning_rate": 0.05,
+    {"n_estimators": 100, "max_depth": 3, "learning_rate": 0.05,
      "num_class": len(le_health.classes_), "objective": "multi:softprob"}
 )
 
-# Traffic Status
 evaluate_xgb(
     "Traffic Status Classifier",
-    df_daily[["time_of_day","day_of_week","traffic_density","aqi","temperature"]],
+    df_daily[["time_of_day","day_of_week","aqi","temperature","humidity"]],
     df_daily["traffic_status_label"],
     list(le_traffic.classes_),
-    {"n_estimators": 200, "max_depth": 4, "learning_rate": 0.05,
+    {"n_estimators": 100, "max_depth": 3, "learning_rate": 0.05,
      "num_class": len(le_traffic.classes_), "objective": "multi:softprob"}
 )
 
-# Crisis Classifier (sliding window)
 print("\n  -- Urban Crisis Classifier (7-day window) --")
 WINDOW = 7
 records, labels = [], []
@@ -223,9 +213,6 @@ results.append({"Model":"Crisis Classifier","Type":"XGBoost",
                 "Train_Acc":round(train_acc,4),"Test_Acc":round(test_acc,4),
                 "Gap":round(gap,4),"Verdict":verdict})
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 3. Prophet Models — In-Sample vs Out-of-Sample MAE/RMSE
-# ─────────────────────────────────────────────────────────────────────────────
 print("\n[3/4] Evaluating Prophet models (last 20% as holdout)...")
 
 split_idx = int(N * 0.80)
@@ -236,7 +223,6 @@ def eval_prophet(name, model_path, col, df_train, df_test, date_col="Date"):
     with open(model_path, "rb") as f:
         model = pickle.load(f)
 
-    # In-sample predictions (train period)
     df_hist = model.history[["ds","y"]].copy()
     if "pm25_reg" in model.extra_regressors:
         df_hist["pm25_reg"] = model.history["pm25_reg"].values
@@ -244,10 +230,9 @@ def eval_prophet(name, model_path, col, df_train, df_test, date_col="Date"):
     mae_train = mean_absolute_error(df_hist["y"], in_pred["yhat"])
     rmse_train = np.sqrt(((df_hist["y"] - in_pred["yhat"])**2).mean())
 
-    # Out-of-sample: build future df for test dates
     future = pd.DataFrame({"ds": df_test[date_col]})
     if "pm25_reg" in model.extra_regressors:
-        # Use actual PM2.5 from test period (the model was trained to use this regressor)
+
         future["pm25_reg"] = df_test["pm25"].values
 
     out_pred = model.predict(future)
@@ -264,7 +249,6 @@ def eval_prophet(name, model_path, col, df_train, df_test, date_col="Date"):
     print(f"     Test  MAE / RMSE : {mae_test:.3f}  / {rmse_test:.3f}")
     print(f"     RMSE Gap         : {gap:.3f}  ->  {verdict}")
 
-    # Plot actual vs predicted on test set
     fig, ax = plt.subplots(figsize=(10, 4))
     ax.plot(df_test[date_col].values, actual,     label="Actual",    color="#ef4444", linewidth=1.5)
     ax.plot(df_test[date_col].values, pred,       label="Predicted", color="#3b82f6", linewidth=1.5, linestyle="--")
@@ -284,9 +268,6 @@ def eval_prophet(name, model_path, col, df_train, df_test, date_col="Date"):
 eval_prophet("AQI Forecast",          os.path.join(MODELS_DIR,"aqi.pkl"),   "aqi",           df_train, df_test)
 eval_prophet("Water Quality Forecast", os.path.join(MODELS_DIR,"water.pkl"), "water_quality", df_train, df_test)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 4. Summary Table
-# ─────────────────────────────────────────────────────────────────────────────
 print("\n[4/4] Summary")
 print("=" * 65)
 df_results = pd.DataFrame(results)

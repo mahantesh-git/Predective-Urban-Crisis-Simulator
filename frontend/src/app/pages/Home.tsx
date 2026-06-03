@@ -9,7 +9,7 @@ export function Home() {
 
     return (
         <main className="min-h-screen bg-[#EAE3D6] flex flex-col justify-between font-sans selection:bg-[#C05A1A] selection:text-white">
-            {/* Navbar Minimal */}
+            {}
             <nav className="p-[15px] flex justify-between items-center text-[#4B2E1E]">
                 <div className="font-serif font-bold text-xl tracking-tight">
                     CitySentinel <span className="text-[#C05A1A]">AI</span>
@@ -23,7 +23,7 @@ export function Home() {
                 </div>
             </nav>
 
-            {/* Hero Section */}
+            {}
             <section className="flex-1 flex items-center justify-center text-center px-[15px] -mt-16">
                 <div className="w-full flex flex-col items-center">
 
@@ -65,7 +65,7 @@ export function Home() {
                 </div>
             </section>
 
-            {/* Scroll Indicator / Entry CTA */}
+            {}
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

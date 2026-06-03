@@ -65,5 +65,4 @@ const startSimulator = (app, intervalMs = 60000) => {
 
 };
 
-
 module.exports = { startSimulator };

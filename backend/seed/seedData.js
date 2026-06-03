@@ -5,14 +5,6 @@ const path = require('path');
 const connectDB = require('../config/db');
 const EnvironmentalData = require('../models/EnvironmentalData');
 
-/**
- * Seed Script – Real CSV Environmental Data from Kaggle city_day.csv
- * ─────────────────────────────────────────────────────────────────────────────
- * Maps CSV city names to app cityIds and imports real AQI data.
- * Run with: npm run seed
- */
-
-// Map: CSV city name → app cityId (all 26 cities from city_day.csv)
 const CITY_MAP = {
     'Ahmedabad': 'ahmedabad',
     'Aizawl': 'aizawl',
@@ -28,7 +20,7 @@ const CITY_MAP = {
     'Hyderabad': 'hyderabad',
     'Jaipur': 'jaipur',
     'Jodhpur': 'jodhpur',
-    'Kochi': 'ernakulam',  // Kochi shares Ernakulam profile
+    'Kochi': 'ernakulam',  
     'Kolkata': 'kolkata',
     'Lucknow': 'lucknow',
     'Mumbai': 'mumbai',
@@ -40,11 +32,6 @@ const CITY_MAP = {
     'Visakhapatnam': 'visakhapatnam',
 };
 
-
-
-/**
- * Parse the CSV file manually (lightweight, no external deps).
- */
 function parseCSV(filePath) {
     const content = fs.readFileSync(filePath, 'utf8');
     const lines = content.trim().split('\n');
@@ -57,27 +44,23 @@ function parseCSV(filePath) {
     });
 }
 
-/**
- * Derive traffic, water quality and other metrics from AQI using city multipliers.
- * These are realistic approximations based on environmental literature correlations.
- */
 function deriveMetrics(aqi, cityId, dateStr) {
-    // Traffic correlates with AQI (normalized 0-100)
+    
     const traffic = Math.min(100, Math.max(0, (aqi / 500) * 100 + (Math.random() * 10 - 5)));
 
-    // Water quality inversely correlates with AQI and population pressure
+    
     const water_quality = Math.max(5, Math.min(100, 90 - (aqi / 10) - (Math.random() * 5)));
 
-    // Industry emission correlates strongly with AQI
+    
     const industry_emission = Math.min(100, Math.max(0, (aqi / 500) * 80 + (Math.random() * 8)));
 
-    // Temperature: estimate from month and city
-    const month = new Date(dateStr).getMonth(); // 0-11
+    
+    const month = new Date(dateStr).getMonth(); 
     const lat_factor = cityId === 'delhi' || cityId === 'lucknow' ? 5 : 0;
     const base_temp = 25 + Math.sin((month - 3) * Math.PI / 6) * 10 + lat_factor;
     const temperature = Math.round(base_temp * 10) / 10;
 
-    // Drought index: inversely correlates with water quality, boosted in summer
+    
     const summer_factor = (month >= 3 && month <= 6) ? 0.2 : 0;
     const drought_index = Math.min(0.95, Math.max(0, (1 - water_quality / 100) * 0.7 + summer_factor));
 
@@ -98,7 +81,7 @@ const seed = async () => {
     const csvPath = path.join(__dirname, '../../datasets/city_day.csv');
 
     if (!fs.existsSync(jsonPath)) {
-        // Try to generate it on-the-fly if Python is available
+        
         console.log('city_aqi_clean.json not found, generating from CSV...');
         if (!fs.existsSync(csvPath)) {
             console.error('Neither city_aqi_clean.json nor city_day.csv found. Please run the Python pre-processor.');
@@ -109,11 +92,11 @@ const seed = async () => {
     const rawRecords = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
     console.log(` Loaded ${rawRecords.length} clean AQI records from city_aqi_clean.json`);
 
-    // Clear existing environmental data
+    
     const deleted = await EnvironmentalData.deleteMany({});
     console.log(` Cleared ${deleted.deletedCount} existing records.`);
 
-    // Group records by cityId using the CITY_MAP
+    
     const cityGroups = {};
     for (const rec of rawRecords) {
         const cityId = CITY_MAP[rec.city];
@@ -128,11 +111,11 @@ const seed = async () => {
     let totalInserted = 0;
 
     for (const [cityId, entries] of Object.entries(cityGroups)) {
-        // Sort by date ascending, use last 90 records
+        
         entries.sort((a, b) => new Date(a.dateStr) - new Date(b.dateStr));
         const recent = entries.slice(-90);
 
-        // Shift dates so the most recent record is today UTC midnight
+        
         const todayUTC = new Date();
         todayUTC.setUTCHours(0, 0, 0, 0);
 
@@ -158,12 +141,12 @@ const seed = async () => {
         }
     }
 
-    // Seed any mapped cities that had no CSV data with fallback mock data
+    
     const seededCities = new Set(Object.keys(cityGroups));
     const allAppCities = Object.values(CITY_MAP);
     for (const cityId of [...new Set(allAppCities)]) {
         if (seededCities.has(cityId)) continue;
-        // generate 7 days of fallback data
+        
         const baseAqi = 100;
         const todayUTC = new Date();
         todayUTC.setUTCHours(0, 0, 0, 0);

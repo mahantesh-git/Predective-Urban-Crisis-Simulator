@@ -13,7 +13,7 @@ interface ShapleyBarChartProps {
 }
 
 export function ShapleyBarChart({ title, contributions, confidencePct }: ShapleyBarChartProps) {
-    // Find the max absolute impact to scale the bars properly
+    
     const maxImpact = Math.max(...contributions.map(c => Math.abs(c.impact)), 1);
 
     return (
@@ -30,23 +30,23 @@ export function ShapleyBarChart({ title, contributions, confidencePct }: Shapley
             <div className="space-y-3 mt-1">
                 {contributions.map((item, idx) => {
                     const isNegative = item.impact < 0;
-                    // Scale width relative to the maximum impact
+                    
                     const widthPct = Math.min((Math.abs(item.impact) / maxImpact) * 100, 100);
 
                     return (
                         <div key={idx} className="relative flex items-center h-8">
-                            {/* Feature Name */}
+                            {}
                             <div className="absolute left-0 w-1/3 text-xs font-medium text-muted-foreground truncate pr-4 text-right">
                                 {item.feature}
                             </div>
 
-                            {/* Center divider line */}
+                            {}
                             <div className="absolute left-1/3 w-px h-full bg-border -ml-px z-0"></div>
 
-                            {/* Bar Container */}
+                            {}
                             <div className="absolute left-1/3 w-2/3 h-full flex items-center">
                                 {isNegative ? (
-                                    // Negative Impact (Decreases Risk) - Extends LEFT from Center
+                                    
                                     <div className="w-1/2 flex justify-end pr-1 z-10">
                                         <div
                                             className="h-4 bg-emerald-500 rounded-l-sm transition-all duration-500"
@@ -54,7 +54,7 @@ export function ShapleyBarChart({ title, contributions, confidencePct }: Shapley
                                         />
                                     </div>
                                 ) : (
-                                    // Positive Impact (Increases Risk) - Extends RIGHT from Center
+                                    
                                     <div className="w-1/2 flex justify-start pl-1 z-10 offset-1/2 ml-[50%]">
                                         <div
                                             className="h-4 bg-red-500 rounded-r-sm transition-all duration-500"
@@ -64,7 +64,7 @@ export function ShapleyBarChart({ title, contributions, confidencePct }: Shapley
                                 )}
                             </div>
 
-                            {/* Value Label */}
+                            {}
                             <div className="absolute right-0 w-12 text-xs font-bold text-card-foreground text-right pl-2">
                                 {item.impact > 0 ? '+' : ''}{item.impact.toFixed(1)}
                             </div>
@@ -73,7 +73,7 @@ export function ShapleyBarChart({ title, contributions, confidencePct }: Shapley
                 })}
             </div>
 
-            {/* Legend */}
+            {}
             <div className="flex items-center justify-between text-[10px] uppercase font-bold text-muted-foreground mt-2 border-t border-border pt-3">
                 <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Reduces Risk</span>
                 <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500"></span> Increases Risk</span>

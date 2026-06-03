@@ -55,29 +55,29 @@ export function Forecast() {
 
   const loadForecast = async (days: number) => {
     try {
-      // Fetch forecast and current status in parallel so the forecast chart
-      // is anchored to the same live AQI value the Dashboard displays.
+      
+      
       const [raw, statusData] = await Promise.all([
         getForecast(days, city.id),
         getStatus(city.id),
       ]);
 
-      // Current real AQI — same calculation used in Dashboard.tsx.
+      
       const liveAqi = Math.max(
         0,
         Math.round(city.baseAqi + ((statusData?.latest_data?.aqi || city.baseAqi) - city.baseAqi))
       );
       setCurrentAqi(liveAqi);
 
-      // Prophet's internal centre: the mean of its raw forecast values.
-      // We use this to measure each prediction's *deviation* from Prophet's norm,
-      // then apply that deviation on top of the real live AQI.
+      
+      
+      
       const rawAqiForecast: number[] = raw.aqi_forecast || [];
       const prophetMean = rawAqiForecast.length > 0
         ? rawAqiForecast.reduce((a: number, b: number) => a + b, 0) / rawAqiForecast.length
         : city.baseAqi;
 
-      // scaleAqi: preserve Prophet's trend shape, anchored to the live current AQI.
+      
       const scaleAqi = (v: number) => Math.max(0, Math.round(liveAqi + (v - prophetMean)));
       const scaleWater = (v: number) => Math.max(0, Math.min(v, 1));
 
@@ -104,7 +104,7 @@ export function Forecast() {
     }
   };
 
-  // Thin the labels for longer ranges so the axis doesn't crowd
+  
   const thinLabels = (labels: string[], maxTicks = 12) => {
     if (labels.length <= maxTicks) return labels;
     const step = Math.ceil(labels.length / maxTicks);
@@ -187,7 +187,7 @@ export function Forecast() {
 
         {!loading && forecast && (
           <>
-            {/* AQI Chart */}
+            {}
             <Card className="bg-card border-border p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-6">
                 <Cloud className="w-5 h-5 text-red-500" />
@@ -243,7 +243,7 @@ export function Forecast() {
               )}
             </Card>
 
-            {/* Water Stress Chart */}
+            {}
             <Card className="bg-card border-border p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-6">
                 <TrendingUp className="w-5 h-5 text-rust" />
@@ -287,7 +287,7 @@ export function Forecast() {
                 <div className="flex items-center gap-2"><div className="w-3 h-3 bg-slate-400 rounded-full"></div><span>Confidence Band</span></div>
               </div>
 
-              {/* Explainable AI Block for Water Stress */}
+              {}
               {forecast.explainable_ai?.shap_contributions?.water_stress && (
                 <div className="mt-6 pt-6 border-t border-border/50">
                   <ShapleyBarChart
@@ -298,7 +298,7 @@ export function Forecast() {
               )}
             </Card>
 
-            {/* Summary Cards */}
+            {}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="bg-card border-border p-4 shadow-sm">
                 <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Peak AQI Expected</p>
@@ -325,7 +325,7 @@ export function Forecast() {
               </Card>
             </div>
 
-            {/* Crisis Intelligence Panel */}
+            {}
             <div className="mt-8 mb-4 flex items-center gap-2">
               <h3 className="text-xl font-bold text-card-foreground">Crisis Intelligence</h3>
               <Badge variant="outline" className="bg-rust/10 text-rust border-rust ml-2">Smart City ML</Badge>
@@ -378,7 +378,7 @@ export function Forecast() {
               </Card>
             </div>
 
-            {/* Risk Heatmap Section */}
+            {}
             <div className="mt-12 mb-6">
               <div className="flex items-center gap-2 mb-2">
                 <h3 className="text-xl font-bold text-card-foreground">Zonal Risk Heatmap — Temporal Propagation</h3>
@@ -391,7 +391,7 @@ export function Forecast() {
 
                 <div className="overflow-x-auto custom-scrollbar">
                   <div className="min-w-[900px]">
-                    {/* Heatmap Header (Days) */}
+                    {}
                     <div className="flex mb-6 border-b border-slate-800/50 pb-2">
                       <div className="w-56 shrink-0 text-xs font-black text-slate-500 uppercase tracking-widest pl-2">Urban Zones</div>
                       <div className="flex-1 flex justify-between px-4">
@@ -403,7 +403,7 @@ export function Forecast() {
                       </div>
                     </div>
 
-                    {/* Heatmap Rows */}
+                    {}
                     <div className="space-y-3">
                       {['Industrial Zone North', 'Downtown Core', 'Residential Ring East', 'Waterfront District', 'Tech Park South'].map((zone, idx) => {
                         const aqiWeight = [0.85, 0.65, 0.35, 0.25, 0.45][idx];
@@ -464,7 +464,7 @@ export function Forecast() {
                   </div>
                 </div>
 
-                {/* Heatmap Legend - Modernized */}
+                {}
                 <div className="mt-10 flex items-center justify-between border-t border-slate-800/60 pt-6">
                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Risk Stratification Index</p>
                   <div className="flex items-center gap-6">

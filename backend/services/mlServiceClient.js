@@ -25,7 +25,6 @@ const predictWater   = (payload) => callMLEndpoint('/predict/water',   payload);
 const predictHealth  = (payload) => callMLEndpoint('/predict/health',  payload);
 const predictTraffic = (payload) => callMLEndpoint('/predict/traffic', payload);
 
-
 const checkMLHealth = async () => {
     try {
         const response = await fetch(`${ML_URL()}/health`, { timeout: 3000 });

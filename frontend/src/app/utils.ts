@@ -1,6 +1,4 @@
-/**
- * Utility functions for the CitySentinel AI Dashboard
- */
+
 
 export function formatNumber(num: number, decimals: number = 0): string {
   return num.toLocaleString('en-US', {
@@ -16,16 +14,16 @@ export function formatPercentage(num: number, decimals: number = 0): string {
 export function getCrisisColor(level: string): string {
   switch (level) {
     case 'CRITICAL':
-      return '#EF4444'; // red-500
+      return '#EF4444'; 
     case 'HIGH':
-      return '#F97316'; // orange-500
+      return '#F97316'; 
     case 'MODERATE':
-      return '#EAB308'; // yellow-500
+      return '#EAB308'; 
     case 'LOW':
     case 'SAFE':
-      return '#22C55E'; // green-500
+      return '#22C55E'; 
     default:
-      return '#64748b'; // slate-500
+      return '#64748b'; 
   }
 }
 

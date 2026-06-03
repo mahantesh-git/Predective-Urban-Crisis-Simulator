@@ -6,8 +6,6 @@ export interface CityZone {
     population: number;
 }
 
-
-
 export interface CityProfile {
     id: string;
     name: string;
@@ -16,9 +14,9 @@ export interface CityProfile {
     lat: number;
     lng: number;
     population_millions: number;
-    /** Baseline AQI for the city */
+    
     baseAqi: number;
-    /** A short crisis tagline */
+    
     tagline: string;
     zones: CityZone[];
 }
@@ -294,7 +292,7 @@ export const INDIAN_CITIES: CityProfile[] = [
             { id: 'zone_transport', name: 'Port Road / NAD Kotha Road', type: 'TRANSPORT', description: 'Heavy freight corridor connecting the port to national highways.', population: 35000 },
         ],
     },
-    // ── NEW CITIES FROM city_day.csv ──────────────────────────────────────────
+    
     {
         id: 'aizawl',
         name: 'Aizawl',

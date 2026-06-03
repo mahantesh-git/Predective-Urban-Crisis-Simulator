@@ -50,9 +50,7 @@ export function Dashboard() {
   const loadStatus = async () => {
     try {
       const data = await getStatus(city.id);
-
       const rawRisk = data.risk_score || 0;
-
       const scaledRisk = Math.min(rawRisk, 1);
 
       const scaledCascade = {
@@ -61,10 +59,7 @@ export function Dashboard() {
         health_risk: Math.min(data.cascade_effects?.health_risk || 0, 1),
         traffic_disruption: Math.min(data.cascade_effects?.traffic_disruption || 0, 1),
       };
-
-      // Re-derive triggered_systems from the SCALED cascade values using the
-      // same 0.60 crisis threshold the backend applies to raw data.
-      // aqi_impact is in raw AQI units; normalize it (500 = max AQI) for comparison.
+      
       const CRISIS_THRESHOLD = 0.60;
       const scaledAqiRisk = Math.min(scaledCascade.aqi_impact / 500, 1);
       const triggered_systems: string[] = [];
@@ -84,7 +79,7 @@ export function Dashboard() {
         }
       };
 
-      // Recompute crisis level
+      
       if (scaledRisk >= 0.8) scaledData.crisis_level = 'CRITICAL';
       else if (scaledRisk >= 0.6) scaledData.crisis_level = 'HIGH';
       else if (scaledRisk >= 0.4) scaledData.crisis_level = 'MODERATE';
@@ -128,7 +123,7 @@ export function Dashboard() {
     loadStatus();
     loadHistory();
 
-    // WebSocket connection for real-time updates
+    
     let ws: WebSocket | null = null;
     try {
       ws = new WebSocket(WS_URL);
@@ -142,7 +137,7 @@ export function Dashboard() {
         try {
           const data = JSON.parse(event.data);
           if (data.type === 'RISK_UPDATE') {
-            // Only update if the message is for the current city
+            
             if (data.cityId === city.id) {
               setStatus((prev) => {
                 if (!prev) return prev;
@@ -178,7 +173,7 @@ export function Dashboard() {
       console.warn('WebSocket not available:', error);
     }
 
-    // Polling fallback
+    
     const interval = setInterval(loadStatus, 30000);
 
     return () => {
@@ -186,7 +181,6 @@ export function Dashboard() {
       clearInterval(interval);
     };
   }, [city.id]);
-
 
   const getLevel = (score: number) => {
     if (score >= 0.8) return 'CRITICAL';
@@ -236,7 +230,7 @@ export function Dashboard() {
   return (
     <PageTransition>
       <div className={`space-y-6 transition-opacity duration-500 ${loading ? 'opacity-50 pointer-events-none' : ''}`}>
-        {/* Standardized Header */}
+        {}
         <div className="flex items-start justify-between">
           <PageHeader
             title={`${city.name} City Overview`}
@@ -250,7 +244,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Risk Score Gauge */}
+        {}
         <Card className="bg-card border-border p-6 shadow-sm">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -263,7 +257,7 @@ export function Dashboard() {
           </div>
         </Card>
 
-        {/* Cascade Effects Cards */}
+        {}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
           <Card className="bg-card border-border p-6 shadow-sm">
             <div className="flex items-start justify-between">
@@ -322,7 +316,7 @@ export function Dashboard() {
           </Card>
         </div>
 
-        {/* Triggered Systems & Latest Data */}
+        {}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="bg-card border-border p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-card-foreground mb-4">
@@ -368,7 +362,7 @@ export function Dashboard() {
           </Card>
         </div>
 
-        {/* 7-Day Historical Trend */}
+        {}
         <Card className="bg-card border-border p-6 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-card-foreground flex items-center gap-2">

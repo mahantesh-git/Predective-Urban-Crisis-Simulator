@@ -110,7 +110,7 @@ export function Simulate() {
       const rawBaseline = data.baseline?.risk_score || 0;
       const rawResult = data.result?.risk_score || 0;
 
-      // Re-derive triggered_systems from SCALED cascade values (same 0.60 threshold as backend)
+      
       const CRISIS_THRESHOLD = 0.60;
       const deriveTriggered = (node: any): string[] => {
         const fx = node?.cascade_effects;
@@ -147,7 +147,7 @@ export function Simulate() {
         }
       };
 
-      // Recalculate delta based on RAW scaled values to avoid saturation at 100%
+      
       scaledResult.delta = {
         risk_reduction: Math.max(0, rawBaseline - rawResult),
         percentage_improvement: rawBaseline > 0
@@ -171,7 +171,7 @@ export function Simulate() {
       const scaledData = {
         ...data,
         comparison: data.comparison.map((row: any) => {
-          // Store raw for internal logic if needed, but here we just need correct display levels
+          
           const scaledRisk = Math.min(row.risk_score, 1);
           return {
             ...row,
@@ -252,7 +252,7 @@ export function Simulate() {
 
           <TabsContent value="single" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-              {/* Policy Controls Panel */}
+              {}
               <Card className="xl:col-span-5 bg-slate-900/50 backdrop-blur-xl border-slate-800 p-8 shadow-2xl relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                   <ShieldCheck className="w-24 h-24 text-emerald-500" />
@@ -269,7 +269,7 @@ export function Simulate() {
                 </h3>
 
                 <div className="space-y-3">
-                  {/* Traffic Control */}
+                  {}
                   <div className="p-3 rounded-xl border border-slate-800/40 bg-slate-900/40 hover:bg-slate-800/60 transition-all group/slider flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -281,7 +281,7 @@ export function Simulate() {
                     <Slider value={[trafficReduction]} onValueChange={(v) => setTrafficReduction(v[0])} max={100} step={1} className="cursor-pointer py-1" rangeClassName="bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" thumbClassName="border-emerald-400 hover:border-emerald-300 w-4 h-4" />
                   </div>
 
-                  {/* Industrial Emissions */}
+                  {}
                   <div className="p-3 rounded-xl border border-slate-800/40 bg-slate-900/40 hover:bg-slate-800/60 transition-all group/slider flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -293,7 +293,7 @@ export function Simulate() {
                     <Slider value={[industrialCut]} onValueChange={(v) => setIndustrialCut(v[0])} max={100} step={1} className="cursor-pointer py-1" rangeClassName="bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" thumbClassName="border-emerald-400 hover:border-emerald-300 w-4 h-4" />
                   </div>
 
-                  {/* Water Conservation */}
+                  {}
                   <div className="p-3 rounded-xl border border-slate-800/40 bg-slate-900/40 hover:bg-slate-800/60 transition-all group/slider flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -305,7 +305,7 @@ export function Simulate() {
                     <Slider value={[waterConservation]} onValueChange={(v) => setWaterConservation(v[0])} max={100} step={1} className="cursor-pointer py-1" rangeClassName="bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" thumbClassName="border-emerald-400 hover:border-emerald-300 w-4 h-4" />
                   </div>
 
-                  {/* Green Space */}
+                  {}
                   <div className="p-3 rounded-xl border border-slate-800/40 bg-slate-900/40 hover:bg-slate-800/60 transition-all group/slider flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -317,7 +317,7 @@ export function Simulate() {
                     <Slider value={[greenSpaceExpansion]} onValueChange={(v) => setGreenSpaceExpansion(v[0])} max={100} step={1} className="cursor-pointer py-1" rangeClassName="bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" thumbClassName="border-emerald-400 hover:border-emerald-300 w-4 h-4" />
                   </div>
 
-                  {/* External Factor: Heatwave */}
+                  {}
                   <div className="p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 transition-all group/slider flex flex-col gap-2 mt-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -349,7 +349,7 @@ export function Simulate() {
                 </Button>
               </Card>
 
-              {/* Simulation Result Panel */}
+              {}
               <div className="xl:col-span-7 space-y-6">
                 {!result ? (
                   <div className="h-full min-h-[500px] flex flex-col items-center justify-center border-2 border-dashed border-slate-800 rounded-3xl bg-slate-900/20 p-12 text-center">
@@ -368,7 +368,7 @@ export function Simulate() {
                           <TabsTrigger value="network" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-slate-950 font-bold text-xs">Network Map</TabsTrigger>
                           <TabsTrigger value="recommendations" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-slate-950 font-bold text-xs">Recommendations</TabsTrigger>
                         </TabsList>
-                        {/* Restoration Summary Mini */}
+                        {}
                         <div className="px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center gap-2">
                           <ShieldCheck className="w-4 h-4 text-emerald-500" />
                           <span className="text-xs font-bold text-emerald-400">Risk reduced by {result.delta.percentage_improvement}%</span>
@@ -377,7 +377,7 @@ export function Simulate() {
 
                       <TabsContent value="overview" className="space-y-4 m-0 outline-none flex-1">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                          {/* Baseline Status */}
+                          {}
                           <Card className="bg-slate-900 border-slate-800 p-6 shadow-xl relative overflow-hidden group">
                             <div className="absolute top-0 right-0 p-4 opacity-5">
                               <TrendingDown className="w-24 h-24 text-white" />
@@ -422,7 +422,7 @@ export function Simulate() {
                             </div>
                           </Card>
 
-                          {/* Projected Result */}
+                          {}
                           <Card className="bg-slate-900 border-emerald-500/30 p-6 shadow-[0_0_30px_rgba(16,185,129,0.1)] relative overflow-hidden group border-2">
                             <div className="absolute top-0 right-0 p-4 opacity-10">
                               <Trophy className="w-24 h-24 text-emerald-500" />
@@ -458,7 +458,7 @@ export function Simulate() {
                           </Card>
                         </div>
 
-                        {/* Impact Breakdown */}
+                        {}
                         <Card className="bg-slate-950 border-slate-800 p-5 overflow-hidden relative">
                           <div className="absolute top-0 left-0 w-1 h-full bg-emerald-600 shadow-[0_0_15px_#10b981]"></div>
                           <div className="flex items-center justify-between mb-4">
@@ -497,7 +497,6 @@ export function Simulate() {
                             </div>
                           </div>
                         </Card>                      </TabsContent>
-
 
                       <TabsContent value="network" className="m-0 outline-none flex-1 flex flex-col min-h-[400px]">
                         <div className="flex-1 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden pt-4">
@@ -670,7 +669,7 @@ export function Simulate() {
                   Optimal Strategy Ranking
                 </h3>
 
-                {/* Summary Bar */}
+                {}
                 <div className="flex flex-wrap items-center gap-4 mb-5 p-3 rounded-lg bg-slate-900 border border-slate-800">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Winner:</span>
@@ -695,7 +694,7 @@ export function Simulate() {
                         : 'bg-slate-900 border border-slate-800 hover:border-slate-700'
                         }`}
                     >
-                      {/* Top Row: rank + label + score */}
+                      {}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-md flex items-center justify-center font-bold text-xs shrink-0 ${index === 0 ? 'bg-emerald-500 text-slate-950 shadow-sm' : 'bg-slate-800 text-slate-400 border border-slate-700'}`}>
@@ -718,7 +717,7 @@ export function Simulate() {
                         </div>
                       </div>
 
-                      {/* Policy Parameters */}
+                      {}
                       <div className="grid grid-cols-5 gap-2 pt-2 border-t border-slate-800/60">
                         <div className="text-center p-1.5 rounded-md bg-slate-900/80">
                           <p className="text-[9px] font-bold text-slate-500 uppercase mb-0.5">Traffic Cut</p>
@@ -742,7 +741,7 @@ export function Simulate() {
                         </div>
                       </div>
 
-                      {/* Triggered Systems */}
+                      {}
                       {row.triggered_systems?.length > 0 && (
                         <div className="pt-1">
                           <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Triggered Systems:</p>
@@ -764,7 +763,7 @@ export function Simulate() {
                   ))}
                 </div>
 
-                {/* AI Policy Recommendations for the Winner */}
+                {}
                 {comparisonResult.comparison.length > 0 && (
                   <div className="mt-6 border-t border-slate-800 pt-6">
                     <h4 className="text-sm font-bold text-slate-300 uppercase tracking-widest mb-4">

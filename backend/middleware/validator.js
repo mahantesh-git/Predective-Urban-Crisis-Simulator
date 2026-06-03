@@ -1,9 +1,5 @@
 const { body, validationResult } = require('express-validator');
 
-/**
- * Validation rules for POST /simulate
- * Ensures all policy parameters are within acceptable ranges.
- */
 const simulateValidationRules = [
     body('trafficReduction')
         .optional()
@@ -31,10 +27,6 @@ const simulateValidationRules = [
         .withMessage('greenSpaceExpansion must be between 0 and 100'),
 ];
 
-/**
- * Middleware that runs after validation rules.
- * If validation errors exist, returns 400 with detailed messages.
- */
 const validate = (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

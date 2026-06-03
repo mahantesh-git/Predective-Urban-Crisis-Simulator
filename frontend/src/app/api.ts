@@ -9,7 +9,6 @@ const api = axios.create({
   },
 });
 
-
 const getMockLabels = (days: number, startOffset = 0) => {
   return Array.from({ length: days }, (_, i) => {
     const d = new Date();
@@ -193,7 +192,7 @@ export const mockZones = {
 };
 
 export const mockHistory = {
-  labels: getMockLabels(7, -6), // Last 7 days including today
+  labels: getMockLabels(7, -6), 
   aqi_trend: [145, 152, 158, 165, 170, 175, 178],
   water_quality_trend: [0.55, 0.58, 0.62, 0.66, 0.68, 0.70, 0.72],
   traffic_trend: [0.45, 0.48, 0.52, 0.58, 0.61, 0.63, 0.65],
@@ -203,17 +202,17 @@ export const mockHistory = {
   trend: 'WORSENING',
 };
 
-
 export const getStatus = async (cityId?: string) => {
   try {
     const response = await api.get('/status', { params: { cityId } });
     const d = response.data;
     if (!d || d.success === false || d.error) throw new Error('Backend error');
 
-    // Transform backend response → frontend interface
+    
     return {
       risk_score: d.risk_score,
       crisis_level: d.crisis_level,
+      crisis_threshold: d.crisis_threshold,
       triggered_systems: d.triggered_systems || [],
       cascade_effects: {
         aqi_impact: d.cascade_effects?.aqi_risk != null
@@ -242,8 +241,8 @@ export const getForecast = async (days: number = 7, cityId?: string) => {
     const d = response.data;
     if (!d || d.success === false || d.error) throw new Error('Backend error');
 
-    // Backend water_stress_forecast is on 0-100 scale (same as water_quality).
-    // Forecast.tsx multiplies by 100 for display → normalize to 0-1 here.
+    
+    
     const normWater = (v: number) => (v > 1 ? v / 100 : v);
 
     return {
@@ -279,7 +278,7 @@ export const getScenarioForecast = async (params: { scenario_traffic_delta: numb
     return d;
   } catch (error) {
     console.warn('Backend ML online prediction failed, returning mock delta:', error);
-    // Return a mock shifted forecast representing the delta
+    
     const mockShift = (params.scenario_traffic_delta * 0.4 + params.scenario_industry_delta * 0.3) * 100;
     return {
       mode: 'mock_scenario',
@@ -297,7 +296,7 @@ export const getRecommendations = async (cityId?: string) => {
     const d = response.data;
     if (!d || d.success === false || d.error) throw new Error('Backend error');
 
-    // Backend returns `recommendations[].name`, frontend expects `strategies[].label`
+    
     const strategies = (d.recommendations || []).map((r: any) => ({
       label: r.name ?? r.label ?? 'Unknown Strategy',
       description: r.description ?? '',
@@ -380,9 +379,9 @@ export const getHistory = async (cityId?: string) => {
     const d = response.data;
     if (!d || d.success === false || d.error) throw new Error('Backend error');
 
-    // Backend: { chart_data: { labels, aqi, water_quality, traffic, industry_emission }, summary, trend_direction }
-    // Frontend: { labels, aqi_trend, water_quality_trend, traffic_trend, industry_trend, avg_aqi, avg_water_quality, trend }
-    // Note: backend water_quality and traffic are 0-100 scale; frontend multiplies by 100 for % display → divide by 100 here
+    
+    
+    
     const c = d.chart_data || {};
     return {
       labels: c.labels ?? [],
@@ -485,15 +484,13 @@ export const compareScenarios = async (scenarios: any[], cityId?: string) => {
   }
 };
 
-
-
 export const getHistoryRaw = async (cityId: string, days = 7) => {
   try {
     const response = await api.get('/history', { params: { cityId, days } });
     return response.data;
   } catch (error) {
     console.warn('History fetch failed, using mock data:', error);
-    // Generate simple mock history for the last 7 days
+    
     const labels: string[] = [];
     const aqi: number[] = [];
     const risk_scores: number[] = [];
@@ -519,4 +516,3 @@ export const getHistoryRaw = async (cityId: string, days = 7) => {
 };
 
 export default api;
-

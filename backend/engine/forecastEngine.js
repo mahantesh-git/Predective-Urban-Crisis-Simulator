@@ -70,7 +70,6 @@ const transformNewMLResponse = (aqiResult, waterResult, healthResult, trafficRes
     if (trafficResult?.traffic_status === 'CONGESTED') prob += 0.2;
     else if (trafficResult?.traffic_status === 'HEAVY') prob += 0.1;
 
-
     prob = Math.min(prob, 0.98);
 
     const maxAqi = Math.max(...aqi_forecast);
@@ -140,7 +139,6 @@ const transformNewMLResponse = (aqiResult, waterResult, healthResult, trafficRes
         explainable_ai: calculateExplainableAI(latest)
     };
 };
-
 
 const generateForecast = async (historicalData, days = DEFAULT_FORECAST_DAYS) => {
     const mlEnabled = process.env.ML_ENABLED === 'true';

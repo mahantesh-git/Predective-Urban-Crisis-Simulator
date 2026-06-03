@@ -49,7 +49,7 @@ export function History() {
     );
   }
 
-  // Prepare data for multi-series chart with guards
+  
   const labels = history?.labels || [];
   const chartData = labels.map((label, index) => ({
     name: label,
@@ -74,7 +74,7 @@ export function History() {
           </div>
         </div>
 
-        {/* Trend Summary Cards */}
+        {}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="bg-card border-border p-6 shadow-sm">
             <div className="flex items-center justify-between">
@@ -130,7 +130,7 @@ export function History() {
 
         
 
-        {/* Multi-series Area Chart */}
+        {}
         <Card className="bg-card border-border p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-card-foreground mb-6">All Metrics - 7 Day Trend</h3>
           <ResponsiveContainer width="100%" height={400}>
@@ -210,7 +210,7 @@ export function History() {
           </ResponsiveContainer>
         </Card>
 
-        {/* Individual Metric Cards */}
+        {}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="bg-card border-border p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-card-foreground mb-4 flex items-center gap-2">
@@ -317,8 +317,7 @@ export function History() {
                 <h4 className="text-lg font-semibold text-red-500">Worsening Trend Detected</h4>
                 <p className="text-sm text-foreground/80 mt-2 font-medium">
                   Historical analysis indicates conditions are deteriorating across multiple metrics. Immediate policy
-                  intervention is recommended. Review the Recommendations page for actionable strategies to reverse this
-                  trend.
+                  intervention is recommended.
                 </p>
               </div>
             </div>

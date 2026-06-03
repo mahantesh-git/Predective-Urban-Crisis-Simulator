@@ -13,7 +13,7 @@ logger = logging.getLogger("smart_city_ml.multi_forecast")
 router = APIRouter(prefix="/forecast/multi-horizon", tags=["Advanced ML - Multi-Horizon"])
 
 def calculate_dynamic_shap(base_aqi: float, base_water: float, traffic_delta: float, industry_delta: float):
-    # AQI shapley contributions:
+
     traffic_impact = round(18.0 * (1.0 + traffic_delta / 100.0) + random.uniform(-1, 1), 1)
     industry_impact = round(15.0 * (1.0 + industry_delta / 100.0) + random.uniform(-1, 1), 1)
     wind_impact = round(-12.0 - (base_aqi / 100.0) + random.uniform(-1, 1), 1)
@@ -24,7 +24,6 @@ def calculate_dynamic_shap(base_aqi: float, base_water: float, traffic_delta: fl
         {"feature": "Wind Speed", "impact": wind_impact}
     ]
 
-    # Water Stress shapley contributions:
     effluent_impact = round(24.0 * (1.0 + industry_delta / 100.0) + random.uniform(-1, 1), 1)
     rainfall_impact = round(-15.0 + random.uniform(-1, 1), 1)
     treatment_impact = round(-8.0 - (100.0 - base_water) * 0.1 + random.uniform(-1, 1), 1)
@@ -62,15 +61,13 @@ async def generate_multi_horizon_forecast(req: MultiForecastRequest):
             try:
                 logger.info(f"Running real Prophet forecast for {days} days...")
 
-                # Predict for the next N days based on historical data
                 future_aqi = aqi_model.make_future_dataframe(periods=days)
                 if "pm25_reg" in aqi_model.extra_regressors:
                     future_aqi["pm25_reg"] = aqi_model.history["pm25_reg"].mean()
                 aqi_forecast_full = aqi_model.predict(future_aqi)
-                # Take only the future days we requested
+
                 aqi_forecast = aqi_forecast_full.tail(days).reset_index(drop=True)
 
-                # Apply Explainable AI Scenario Shifts
                 scenario_aqi_dampener = (req.scenario_traffic_delta * 0.4) + (req.scenario_industry_delta * 0.5)
                 scenario_water_dampener = (req.scenario_industry_delta * 0.6)
 
@@ -83,7 +80,6 @@ async def generate_multi_horizon_forecast(req: MultiForecastRequest):
                 aqi_lower = [max(0, round(v - 15, 2)) for v in aqi_vals]
                 aqi_upper = [min(500, round(v + 15, 2)) for v in aqi_vals]
 
-                # Water Quality Prophet
                 future_water = water_model.make_future_dataframe(periods=days)
                 water_forecast_full = water_model.predict(future_water)
                 water_forecast = water_forecast_full.tail(days).reset_index(drop=True)
@@ -91,7 +87,7 @@ async def generate_multi_horizon_forecast(req: MultiForecastRequest):
                 ws_vals = []
                 for i, yhat in enumerate(water_forecast["yhat"]):
                     shift = scenario_water_dampener * ((i + 1) / 7.0) if (i + 1) <= 7 else scenario_water_dampener
-                    # yhat is water quality. We invert it to stress, AND subtract the shift (since shift is negative for stress relief)
+
                     ws_val = 100 - yhat - shift 
                     ws_vals.append(max(0, min(100, round(ws_val, 2))))
 
@@ -100,7 +96,6 @@ async def generate_multi_horizon_forecast(req: MultiForecastRequest):
 
                 labels = [(datetime.now() + timedelta(days=i)).strftime("%b %d") for i in range(1, days + 1)]
 
-                # XAI / SHAP Engine Simulation for Prophet
                 base_aqi_val = req.history_aqi[-1] if req.history_aqi else 100
                 base_water_val = req.history_water[-1] if req.history_water else 80
                 conf_pct, shap_aqi_sorted, shap_water_sorted = calculate_dynamic_shap(

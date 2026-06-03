@@ -28,7 +28,7 @@ const runCascade = (normalized, heatwaveLevel = 0) => {
 
     let current_risks = { ...base_risks };
 
-    // Layer 1: Iterative Matrix Propagation (Markov-style)
+    
     for (let t = 0; t < ITERATIONS; t++) {
         let next_risks = { ...current_risks };
 
@@ -51,7 +51,7 @@ const runCascade = (normalized, heatwaveLevel = 0) => {
     const health_risk = current_risks['HEALTH'];
     const traffic_risk = current_risks['TRAFFIC'];
 
-    // Layer 2: Total weighted risk (from crisisScoreEngine)
+    
     const risk_score = (
         (0.40 * aqi_risk) +
         (0.25 * water_risk) +
@@ -59,7 +59,7 @@ const runCascade = (normalized, heatwaveLevel = 0) => {
         (0.15 * traffic_risk)
     );
 
-    // Layer 3: Confidence Interval
+    
     const baseMargin = parseFloat(process.env.CONFIDENCE_MARGIN || '0.12');
     const dynamicVariance = (Math.sin(Date.now() / 10000) * 0.04);
     const margin = Math.max(0.05, baseMargin + dynamicVariance);
@@ -69,14 +69,14 @@ const runCascade = (normalized, heatwaveLevel = 0) => {
         upper: parseFloat(Math.min(risk_score + margin * risk_score, 1).toFixed(4)),
     };
 
-    // Layer 4: Triggered Systems
+    
     const triggered_systems = [];
     if (aqi_risk >= CRISIS_THRESHOLD) triggered_systems.push('AIR_QUALITY');
     if (water_risk >= CRISIS_THRESHOLD) triggered_systems.push('WATER_SUPPLY');
     if (health_risk >= CRISIS_THRESHOLD) triggered_systems.push('PUBLIC_HEALTH');
     if (traffic_risk >= CRISIS_THRESHOLD) triggered_systems.push('TRAFFIC_NETWORK');
 
-    // Layer 5: Time-to-Impact estimate
+    
     const time_to_impact = risk_score > 0 ? Math.max(Math.round((CRISIS_THRESHOLD - risk_score) / 0.05), 0) : null;
 
     return {
